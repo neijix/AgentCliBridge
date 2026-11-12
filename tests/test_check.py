@@ -70,7 +70,7 @@ def test_ci_runs_the_gate_on_github_hosted_runners_for_pushes_and_pull_requests(
     assert "timeout-minutes: 30" in workflow
     assert "fail-fast: false" in workflow
     assert "group: ci-${{ github.ref }}" in workflow and "cancel-in-progress: true" in workflow
-    assert "continue-on-error: ${{ matrix.os == 'windows-latest' }}" in workflow
+    assert "continue-on-error: ${{ matrix.os != 'ubuntu-latest' }}" in workflow
     assert "runner.os != 'Windows'" in workflow and "./check.sh --full" in workflow
     assert "runner.os == 'Windows'" in workflow and "./check.ps1 -Full" in workflow
     assert "uvx ruff" not in workflow and "pytest" not in workflow and "mypy" not in workflow

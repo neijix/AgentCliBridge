@@ -172,7 +172,8 @@ def test_web_scout_code_root_candidates_include_home_CODE(tmp_path, monkeypatch)
     assert default_candidates({"AI_CODE_ROOT": "/y"}) == [Path("/y") / "D3SKWEBSCOUT", *home_only]
     assert default_candidates({"D3SKWEBSCOUT_DIR": "/x/scout", "AI_CODE_ROOT": "/y"}) == [Path("/x/scout")]
     checkout = _checkout(home / "CODE")
-    assert find_checkout(default_candidates({})) == checkout.resolve()
+    # samefile: on a case-insensitive disk (macOS, Windows) ~/Code and ~/CODE are one folder.
+    assert find_checkout(default_candidates({})).samefile(checkout)
 
 
 # ── which approvals the runner answers itself ──

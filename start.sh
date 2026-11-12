@@ -182,7 +182,7 @@ refuse_stranger_on_port() {
     echo "Port $port is used by another program and was left alone."
     exit 1
   fi
-  echo "▶ Replacing the gateway already listening on port $port…"
+  echo "▶ Replacing the gateway already listening on port ${port}…"
   terminate_our_gateway "$holder" || true
   holder="$(port_listener "$port")"
   if [ -n "$holder" ]; then
