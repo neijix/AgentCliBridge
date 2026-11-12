@@ -50,7 +50,9 @@ public sealed class ScoutLocatorTests : IDisposable
         var installed = Checkout("CODE");
         var location = ScoutLocator.Locate(_ => null, _dir);
 
-        Assert.Equal(Path.GetFullPath(installed), location!.Checkout);
+        // macOS and Windows disks are case-insensitive: ~/Code and ~/CODE are one folder there.
+        var comparison = OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        Assert.Equal(Path.GetFullPath(installed), location!.Checkout, StringComparer.FromComparison(comparison));
         Assert.Equal(Path.Combine(location.Checkout, "data", "webscout.sock"), location.SocketPath);
         Assert.Null(ScoutLocator.Locate(_ => null, Path.Combine(_dir, "nowhere")));
     }
