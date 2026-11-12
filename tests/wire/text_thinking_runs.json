@@ -1,0 +1,15 @@
+{
+  "description": "Consecutive text (or thinking) frames merge into one run; a different type starts a new part; extra keys on text/thinking are dropped.",
+  "frames": [
+    ["text", {"v": 1, "text": "Hel"}],
+    ["text", {"v": 1, "text": "lo", "extra": 1}],
+    ["thinking", {"v": 1, "text": "hm"}],
+    ["thinking", {"v": 1, "text": "m"}],
+    ["text", {"v": 1, "text": " again"}]
+  ],
+  "parts": [
+    {"type": "text", "text": "Hello"},
+    {"type": "thinking", "text": "hmm"},
+    {"type": "text", "text": " again"}
+  ]
+}

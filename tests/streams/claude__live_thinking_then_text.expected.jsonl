@@ -1,0 +1,3 @@
+{"event": "SessionUpdate", "session_id": "eb689191-4a66-4ee8-b1f4-ca4b857c3790"}
+{"event": "TextDelta", "text": "pong"}
+{"event": "Completed", "returncode": 0}

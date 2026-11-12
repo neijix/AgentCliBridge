@@ -1,0 +1,15 @@
+{
+  "description": "A text run, a tool call completed by its result, then thinking: the tool part sits between the runs.",
+  "frames": [
+    ["text", {"text": "Hel"}],
+    ["text", {"text": "lo"}],
+    ["tool_call", {"call_id": "c1", "name": "Read", "arguments": {"file_path": "a"}}],
+    ["tool_result", {"call_id": "c1", "output": "ok", "is_error": false}],
+    ["thinking", {"text": "hm"}]
+  ],
+  "parts": [
+    {"type": "text", "text": "Hello"},
+    {"type": "tool", "call_id": "c1", "name": "Read", "arguments": {"file_path": "a"}, "output": "ok", "is_error": false, "done": true},
+    {"type": "thinking", "text": "hm"}
+  ]
+}

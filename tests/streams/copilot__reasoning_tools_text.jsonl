@@ -1,0 +1,10 @@
+{"type": "assistant.reasoning_delta", "data": {"reasoningId": "r", "deltaContent": "I should"}}
+{"type": "assistant.reasoning", "data": {"reasoningId": "r", "content": "I should"}}
+{"type": "assistant.message", "data": {"messageId": "m0", "content": "", "toolRequests": [{"toolCallId": "x"}]}}
+{"type": "tool.execution_start", "data": {"toolCallId": "x", "toolName": "bash", "arguments": {"command": "ls"}}}
+{"type": "tool.execution_complete", "data": {"toolCallId": "x", "success": true, "result": {"content": "hub\n"}}}
+{"type": "assistant.message_delta", "data": {"messageId": "m1", "deltaContent": "The "}}
+{"type": "assistant.message_delta", "data": {"messageId": "m1", "deltaContent": "answer."}}
+{"type": "assistant.message", "data": {"messageId": "m1", "content": "The answer."}}
+{"type": "assistant.message", "data": {"messageId": "m2", "content": " Also this."}}
+{"type": "result", "sessionId": "p1", "exitCode": 0}

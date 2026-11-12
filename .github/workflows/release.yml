@@ -1,0 +1,134 @@
+name: Release
+
+# A pushed v* tag builds each OS's installer on a GitHub-hosted runner and attaches it to the
+# tag's GitHub Release (packaging/release.sh). Nothing outside this repo is needed to build: the snapshot and the packages use the standard library and each OS's packager.
+#
+# Order: Linux first (it creates the Release and uploads the snapshot archive); macOS and Windows after
+# it; SHA256SUMS last, by one job, once every build job succeeded. Uploads never replace an asset
+# (no --clobber): a re-run on a tag that has its package fails, naming it.
+#
+# Signing is optional: the macOS identity and the Windows certificate thumbprint come from repository
+# secrets of the same names; unset, the secret reads as empty and the packager builds unsigned.
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      # release.sh runs the snapshot builder with $PYTHON: uv's 3.12 (installed if missing), never the
+      # runner's own python3; a failed find stops the job instead of exporting an empty PATH entry.
+      - name: Point release.sh at Python 3.12
+        run: uv python install 3.12 && py="$(uv python find 3.12)" && echo "PYTHON=$py" >> "$GITHUB_ENV"
+
+      - name: Build the .deb and attach it to the Release
+        run: bash packaging/release.sh release --tag "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --no-sums
+
+  macos:
+    needs: linux
+    runs-on: macos-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      # release.sh runs the snapshot builder with $PYTHON: uv's 3.12 (installed if missing), never the
+      # runner's own python3; a failed find stops the job instead of exporting an empty PATH entry.
+      - name: Point release.sh at Python 3.12
+        run: uv python install 3.12 && py="$(uv python find 3.12)" && echo "PYTHON=$py" >> "$GITHUB_ENV"
+
+      - name: Build the .pkg and attach it to the Release
+        env:
+          AGENTCLIBRIDGE_PKG_SIGN_IDENTITY: ${{ secrets.AGENTCLIBRIDGE_PKG_SIGN_IDENTITY }}
+        run: bash packaging/release.sh release --tag "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --no-sums
+
+  windows:
+    needs: linux
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      # release.sh runs the snapshot builder with $PYTHON: uv's 3.12 (installed if missing), never the
+      # runner's own python3; a failed find stops the job instead of exporting an empty PATH entry.
+      - name: Point release.sh at Python 3.12
+        shell: bash
+        run: uv python install 3.12 && py="$(uv python find 3.12)" && echo "PYTHON=$py" >> "$GITHUB_ENV"
+
+      # build-exe.ps1 compiles with Inno Setup 6; not every hosted Windows image ships it.
+      - name: Make sure Inno Setup 6 is installed
+        shell: bash
+        run: test -x "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" || choco install innosetup -y --no-progress
+
+      # release.sh is bash: Git Bash, which the hosted Windows runner has.
+      - name: Build the .exe and attach it to the Release
+        shell: bash
+        env:
+          AGENTCLIBRIDGE_WIN_SIGN_THUMBPRINT: ${{ secrets.AGENTCLIBRIDGE_WIN_SIGN_THUMBPRINT }}
+        run: bash packaging/release.sh release --tag "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --no-sums
+
+  sums:
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      # release.sh runs the snapshot builder with $PYTHON: uv's 3.12 (installed if missing), never the
+      # runner's own python3; a failed find stops the job instead of exporting an empty PATH entry.
+      - name: Point release.sh at Python 3.12
+        run: uv python install 3.12 && py="$(uv python find 3.12)" && echo "PYTHON=$py" >> "$GITHUB_ENV"
+
+      - name: Write SHA256SUMS from every asset on the Release
+        run: bash packaging/release.sh sums --tag "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY"

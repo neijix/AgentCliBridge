@@ -1,0 +1,20 @@
+{
+  "description": "Frame names fold does not store (protocol and app frames) leave the parts untouched, even between two text frames.",
+  "frames": [
+    ["snapshot", {"v": 1, "parts": [{"type": "text", "text": "never stored"}]}],
+    ["text", {"v": 1, "text": "a"}],
+    ["session", {"v": 1, "session_id": "s1"}],
+    ["approval_request", {"v": 1, "approval_id": "r1", "call_id": "c1", "name": "Bash", "arguments": {}, "description": "d"}],
+    ["injection_detected", {"v": 1, "call_id": "c1", "tool_name": "Read", "rules": ["x"], "excerpt": "e", "details_url": ""}],
+    ["action_blocked", {"v": 1, "call_id": "c1", "name": "Bash", "reason": "no", "details_url": ""}],
+    ["input_accepted", {"v": 1}],
+    ["permission_mode", {"v": 1, "mode": "plan"}],
+    ["caught_up", {"v": 1}],
+    ["error", {"v": 1, "message": "boom", "code": "cli_agent_failed"}],
+    ["done", {"v": 1, "returncode": 0}],
+    ["text", {"v": 1, "text": "b"}]
+  ],
+  "parts": [
+    {"type": "text", "text": "ab"}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "description": "Extra keys of tool_call / tool_result frames survive on the tool part (scout, approval, truncated, high_risk, withheld); v, mapped keys, type and done are never copied; a result extra overrides the call's; text/thinking extras are dropped.",
+  "frames": [
+    ["tool_call", {"v": 1, "call_id": "c2", "name": "WebFetch", "arguments": {}, "scout": true, "truncated": false}],
+    ["tool_result", {"v": 1, "call_id": "c2", "output": "x", "is_error": false, "truncated": true, "approval": "denied", "type": "bogus", "done": false}],
+    ["tool_call", {"v": 1, "call_id": "c3", "name": "Bash", "arguments": {"command": "rm x"}, "high_risk": true, "type": "bogus", "done": true}],
+    ["tool_result", {"v": 1, "call_id": "c3", "output": "", "is_error": true, "withheld": true, "v2": 2}],
+    ["text", {"v": 1, "text": "a", "extra": 1}],
+    ["thinking", {"v": 1, "text": "b", "extra": 2}]
+  ],
+  "parts": [
+    {"type": "tool", "call_id": "c2", "name": "WebFetch", "arguments": {}, "output": "x", "is_error": false, "done": true, "scout": true, "truncated": true, "approval": "denied"},
+    {"type": "tool", "call_id": "c3", "name": "Bash", "arguments": {"command": "rm x"}, "output": "", "is_error": true, "done": true, "high_risk": true, "withheld": true, "v2": 2},
+    {"type": "text", "text": "a"},
+    {"type": "thinking", "text": "b"}
+  ]
+}

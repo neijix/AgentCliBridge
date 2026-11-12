@@ -1,0 +1,9 @@
+{"event": "SessionUpdate", "session_id": "ses_1"}
+{"event": "ThinkingDelta", "text": "Read it first."}
+{"event": "ToolCall", "call_id": "call_1", "name": "read", "arguments": {"filePath": "/p/note.txt"}}
+{"event": "ToolResult", "call_id": "call_1", "output": "1: hello", "is_error": false}
+{"event": "ToolCall", "call_id": "call_2", "name": "bash", "arguments": {"command": "ls /"}}
+{"event": "ToolResult", "call_id": "call_2", "output": "The user rejected permission to use this specific tool call.", "is_error": true}
+{"event": "TextDelta", "text": "It says hello."}
+{"event": "TextDelta", "text": "\n\nDone."}
+{"event": "Completed", "returncode": 0}

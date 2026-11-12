@@ -1,0 +1,16 @@
+{
+  "description": "Two tools in flight, results out of order, an error result, and text between them that does not merge across a tool part.",
+  "frames": [
+    ["tool_call", {"v": 1, "call_id": "a", "name": "Read", "arguments": {"file_path": "x"}}],
+    ["tool_call", {"v": 1, "call_id": "b", "name": "Bash", "arguments": {"command": "ls"}}],
+    ["text", {"v": 1, "text": "working"}],
+    ["tool_result", {"v": 1, "call_id": "b", "output": "boom", "is_error": true}],
+    ["text", {"v": 1, "text": "..."}],
+    ["tool_result", {"v": 1, "call_id": "a", "output": "contents", "is_error": false}]
+  ],
+  "parts": [
+    {"type": "tool", "call_id": "a", "name": "Read", "arguments": {"file_path": "x"}, "output": "contents", "is_error": false, "done": true},
+    {"type": "tool", "call_id": "b", "name": "Bash", "arguments": {"command": "ls"}, "output": "boom", "is_error": true, "done": true},
+    {"type": "text", "text": "working..."}
+  ]
+}
