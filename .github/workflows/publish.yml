@@ -1,0 +1,40 @@
+# Publishes the D3sk.* packages to GitHub Packages on a dotnet-v<semver> tag. Never a plain v* tag:
+# those are the Python line's (branch python), and its updater reads the Latest release.
+# The package token is the workflow's own, only in the push step's env.
+name: publish
+
+on:
+  push:
+    tags: ['dotnet-v*']
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet test D3sk.AgentCli.slnx -c Release
+      - name: Pack
+        run: |
+          rm -rf artifacts
+          dotnet pack src/D3sk.AgentCli -c Release -o artifacts -p:Version=${GITHUB_REF_NAME#dotnet-v}
+      - name: Push to GitHub Packages
+        env:
+          PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          --api-key "$PACKAGES_TOKEN"
+          --skip-duplicate

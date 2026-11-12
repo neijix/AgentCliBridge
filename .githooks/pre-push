@@ -1,0 +1,11 @@
+#!/bin/sh
+# The fast gate before a push: ./check.sh. Enable once per clone:
+#   git config core.hooksPath .githooks
+# Skip once: SKIP_CHECK=1 git push, or git push --no-verify.
+if [ "${SKIP_CHECK:-}" = "1" ]; then
+  echo "pre-push: SKIP_CHECK=1, ./check.sh skipped"
+  exit 0
+fi
+top="$(git rev-parse --show-toplevel)" || exit 1
+# stdin carries the pushed refs; the gate must not read them.
+exec "$top/check.sh" < /dev/null

@@ -1,0 +1,127 @@
+{
+ "account_homes": [
+  "perso-two",
+  "work"
+ ],
+ "account_variables": [
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_AUTH_TOKEN",
+  "ANTHROPIC_BASE_URL",
+  "ANTHROPIC_BEDROCK_BASE_URL",
+  "ANTHROPIC_BETAS",
+  "ANTHROPIC_CUSTOM_HEADERS",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+  "ANTHROPIC_DEFAULT_OPUS_MODEL",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL",
+  "ANTHROPIC_FOUNDRY_API_KEY",
+  "ANTHROPIC_FOUNDRY_BASE_URL",
+  "ANTHROPIC_FOUNDRY_RESOURCE",
+  "ANTHROPIC_MODEL",
+  "ANTHROPIC_SMALL_FAST_MODEL",
+  "ANTHROPIC_VERTEX_BASE_URL",
+  "ANTHROPIC_VERTEX_PROJECT_ID",
+  "CLAUDE_CODE_OAUTH_TOKEN",
+  "CLAUDE_CODE_SUBAGENT_MODEL",
+  "CLAUDE_CODE_USE_BEDROCK",
+  "CLAUDE_CODE_USE_FOUNDRY",
+  "CLAUDE_CODE_USE_VERTEX",
+  "CLAUDE_CONFIG_DIR",
+  "COPILOT_HOME",
+  "CURSOR_CONFIG_DIR",
+  "CURSOR_DATA_DIR",
+  "GEMINI_CLI_HOME",
+  "GROK_HOME"
+ ],
+ "agent_accounts_json": {
+  "accounts": [
+   {
+    "agents": [
+     "claude",
+     "cursor-agent"
+    ],
+    "id": "work",
+    "name": "Work"
+   },
+   {
+    "agents": [
+     "copilot"
+    ],
+    "id": "perso-two",
+    "name": "Perso Two"
+   }
+  ],
+  "folders": {
+   "<TMP>/Code/Work": {
+    "claude": "work",
+    "copilot": "off"
+   }
+  }
+ },
+ "claude_env": {
+  "ANTHROPIC_API_KEY": "",
+  "ANTHROPIC_AUTH_TOKEN": "",
+  "ANTHROPIC_BASE_URL": "",
+  "ANTHROPIC_BEDROCK_BASE_URL": "",
+  "ANTHROPIC_BETAS": "",
+  "ANTHROPIC_CUSTOM_HEADERS": "",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL": "",
+  "ANTHROPIC_DEFAULT_OPUS_MODEL": "",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL": "",
+  "ANTHROPIC_FOUNDRY_API_KEY": "",
+  "ANTHROPIC_FOUNDRY_BASE_URL": "",
+  "ANTHROPIC_FOUNDRY_RESOURCE": "",
+  "ANTHROPIC_MODEL": "",
+  "ANTHROPIC_SMALL_FAST_MODEL": "",
+  "ANTHROPIC_VERTEX_BASE_URL": "",
+  "ANTHROPIC_VERTEX_PROJECT_ID": "",
+  "CLAUDE_CODE_OAUTH_TOKEN": "",
+  "CLAUDE_CODE_SUBAGENT_MODEL": "",
+  "CLAUDE_CODE_USE_BEDROCK": "",
+  "CLAUDE_CODE_USE_FOUNDRY": "",
+  "CLAUDE_CODE_USE_VERTEX": "",
+  "CLAUDE_CONFIG_DIR": "<TMP>/state/accounts/work/.claude"
+ },
+ "cursor_env_default": {},
+ "flavors": [
+  "claude",
+  "copilot",
+  "cursor",
+  "gemini",
+  "grok"
+ ],
+ "home_mode": "0o700",
+ "sign_in_claude": [
+  [
+   "auth",
+   "login"
+  ],
+  {
+   "ANTHROPIC_API_KEY": "",
+   "ANTHROPIC_AUTH_TOKEN": "",
+   "ANTHROPIC_BASE_URL": "",
+   "ANTHROPIC_BEDROCK_BASE_URL": "",
+   "ANTHROPIC_BETAS": "",
+   "ANTHROPIC_CUSTOM_HEADERS": "",
+   "ANTHROPIC_DEFAULT_HAIKU_MODEL": "",
+   "ANTHROPIC_DEFAULT_OPUS_MODEL": "",
+   "ANTHROPIC_DEFAULT_SONNET_MODEL": "",
+   "ANTHROPIC_FOUNDRY_API_KEY": "",
+   "ANTHROPIC_FOUNDRY_BASE_URL": "",
+   "ANTHROPIC_FOUNDRY_RESOURCE": "",
+   "ANTHROPIC_MODEL": "",
+   "ANTHROPIC_SMALL_FAST_MODEL": "",
+   "ANTHROPIC_VERTEX_BASE_URL": "",
+   "ANTHROPIC_VERTEX_PROJECT_ID": "",
+   "CLAUDE_CODE_OAUTH_TOKEN": "",
+   "CLAUDE_CODE_SUBAGENT_MODEL": "",
+   "CLAUDE_CODE_USE_BEDROCK": "",
+   "CLAUDE_CODE_USE_FOUNDRY": "",
+   "CLAUDE_CODE_USE_VERTEX": "",
+   "CLAUDE_CONFIG_DIR": "<TMP>/state/accounts/work/.claude"
+  }
+ ],
+ "state_files": [
+  "accounts",
+  "agent-accounts.json"
+ ]
+}

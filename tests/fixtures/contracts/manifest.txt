@@ -1,0 +1,2 @@
+# Copy of d3skhand tests/fixtures/contracts (row 7); SHA-256 per file
+503ccce67fe4915b4466568fe81f67e8f1f4b076b7d31acf7da414de61b56225  accounts_layout.json

@@ -1,0 +1,10 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <!-- `dotnet test` on the solution does not run xunit v3 unless the project opts in to the
+         Microsoft.Testing.Platform runner itself. global.json's test runner is not enough. -->
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <!-- Exit code 8 is zero tests, not a failure. -->
+    <TestingPlatformCommandLineArguments>--ignore-exit-code 8</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+</Project>

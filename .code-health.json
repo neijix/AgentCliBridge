@@ -1,0 +1,15 @@
+{
+  "limits": {
+    "file_lines": 800,
+    "function_lines": 80,
+    "function_ccn": 20,
+    "duplicate_lines": 10
+  },
+  "exclude": [],
+  "baseline": {
+    "file_lines": {},
+    "function_lines": {},
+    "function_ccn": {},
+    "duplicate_lines": {}
+  }
+}

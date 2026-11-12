@@ -1,0 +1,41 @@
+# The C# gate (restore, build with warnings as errors, every test) on GitHub-hosted runners, for
+# every push to main and every pull request; also by hand (Actions > CI > Run workflow).
+# ./check.sh locally is the per-commit gate. Read-only token: nothing here needs to write.
+# Windows is informational until the suite's Windows failures are fixed.
+# The Python line's CI is on the `python` branch.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, dotnet)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet test D3sk.AgentCli.slnx -c Release

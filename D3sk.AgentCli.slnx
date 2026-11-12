@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/D3sk.AgentCli/D3sk.AgentCli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/D3sk.AgentCli.Tests/D3sk.AgentCli.Tests.csproj" />
+  </Folder>
+</Solution>

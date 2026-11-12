@@ -1,0 +1,8 @@
+#!/bin/sh
+# core.hooksPath hides .git/hooks, so a local, unversioned pre-commit there (a guard a
+# sync tool installs, say) still runs from here. None there: nothing to do.
+local_hook="$(git rev-parse --git-common-dir)/hooks/pre-commit"
+if [ -f "$local_hook" ] && [ -x "$local_hook" ]; then
+  exec "$local_hook" "$@"
+fi
+exit 0

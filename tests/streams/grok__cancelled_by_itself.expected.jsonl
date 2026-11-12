@@ -1,0 +1,4 @@
+{"event": "SessionUpdate", "session_id": "g1"}
+{"event": "TextDelta", "text": "Running tests."}
+{"event": "StreamError", "message": "Grok cancelled its own turn: a tool needed an approval that a headless run cannot give. Choose a more permissive mode (e.g. Bypass) if it should run that tool.", "code": "cancelled"}
+{"event": "Completed", "returncode": 0}

@@ -1,0 +1,30 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+bin/
+obj/
+artifacts/
+*.nupkg
+*.snupkg
+TestResults/
+.vs/
+.idea/
+*.user
+*.swp
+node_modules/
+# the Python line's local leftovers (it lives on branch python)
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+build/
+dist/
+.claude/settings.local.json
+# the owner's shared settings (README › Settings): never in the repo
+config.local/
+CLAUDE.local.md

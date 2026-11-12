@@ -1,0 +1,8 @@
+{"type": "step_start", "sessionID": "ses_1", "part": {"type": "step-start"}}
+{"type": "reasoning", "sessionID": "ses_1", "part": {"type": "reasoning", "text": "Read it first."}}
+{"type": "tool_use", "sessionID": "ses_1", "part": {"type": "tool", "tool": "read", "callID": "call_1", "state": {"status": "completed", "input": {"filePath": "/p/note.txt"}, "output": "1: hello"}}}
+{"type": "tool_use", "sessionID": "ses_1", "part": {"type": "tool", "tool": "bash", "callID": "call_2", "state": {"status": "error", "input": {"command": "ls /"}, "error": "The user rejected permission to use this specific tool call."}}}
+{"type": "step_finish", "sessionID": "ses_1", "part": {"type": "step-finish", "reason": "tool-calls"}}
+{"type": "text", "sessionID": "ses_1", "part": {"type": "text", "text": "It says hello."}}
+{"type": "text", "sessionID": "ses_1", "part": {"type": "text", "text": "Done."}}
+{"type": "step_finish", "sessionID": "ses_1", "part": {"type": "step-finish", "reason": "stop"}}

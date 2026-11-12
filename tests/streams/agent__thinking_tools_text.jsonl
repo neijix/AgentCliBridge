@@ -1,0 +1,7 @@
+{"type": "system", "subtype": "init", "session_id": "c1"}
+{"type": "thinking", "subtype": "delta", "text": "I will read", "timestamp_ms": 1}
+{"type": "thinking", "subtype": "completed", "timestamp_ms": 2}
+{"type": "tool_call", "subtype": "started", "call_id": "k1", "tool_call": {"shellToolCall": {"args": {"command": "ls agentdesk", "workingDirectory": "", "parsingResult": {"x": 1}, "description": "List"}}}}
+{"type": "tool_call", "subtype": "completed", "call_id": "k1", "tool_call": {"shellToolCall": {"args": {"command": "ls agentdesk"}, "result": {"success": {"exitCode": 0, "stdout": "hub\n", "interleavedOutput": "hub\n"}}}}}
+{"type": "assistant", "message": {"content": [{"type": "text", "text": "One."}]}, "timestamp_ms": 3}
+{"type": "result", "subtype": "success", "result": "One.", "session_id": "c1"}
