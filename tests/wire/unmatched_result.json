@@ -1,0 +1,13 @@
+{
+  "description": "A tool_result whose call_id matches no tool part changes nothing; a result only completes a tool part, never a text part.",
+  "frames": [
+    ["tool_result", {"v": 1, "call_id": "c9", "output": "orphan", "is_error": false}],
+    ["text", {"v": 1, "text": "hi"}],
+    ["tool_call", {"v": 1, "call_id": "c1", "name": "Read", "arguments": {}}],
+    ["tool_result", {"v": 1, "call_id": "c9", "output": "still orphan", "is_error": true}]
+  ],
+  "parts": [
+    {"type": "text", "text": "hi"},
+    {"type": "tool", "call_id": "c1", "name": "Read", "arguments": {}, "output": "", "is_error": false, "done": false}
+  ]
+}

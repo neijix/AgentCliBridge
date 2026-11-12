@@ -1,0 +1,51 @@
+# The same gate an agent must pass before committing (AGENTS.md, Core rules 3): check.sh / check.ps1
+# hold the tool list; this repo has no separate slow suite, so --full is that same gate.
+# Runs on GitHub-hosted runners for every push to the line's branch and every pull request; also by
+# hand (Actions > CI > Run workflow). Read-only token: nothing here needs to write.
+# Windows is informational until the suite's fake CLIs stop relying on shebangs and POSIX
+# symlinks (docs/state/limitations.md).
+name: CI
+
+on:
+  push:
+    branches: [python, python-d3skhand]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+      # The UI tests (tests/ui) run from the check script when node is installed.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Gate
+        if: runner.os != 'Windows'
+        shell: bash
+        run: ./check.sh --full
+      - name: Gate (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./check.ps1 -Full

@@ -1,0 +1,5 @@
+{"event": "SessionUpdate", "session_id": "a1"}
+{"event": "ToolCall", "call_id": "2", "name": "view_file", "arguments": {"AbsolutePath": "/p/pyproject.toml"}}
+{"event": "ToolResult", "call_id": "2", "output": "31 lines", "is_error": false}
+{"event": "TextDelta", "text": "Done."}
+{"event": "Completed", "returncode": 0}

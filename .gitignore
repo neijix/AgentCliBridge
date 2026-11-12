@@ -1,0 +1,20 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.gateway.pid
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+build/
+dist/
+.claude/settings.local.json
+# the owner's shared settings (README › Settings): never in the repo
+config.local/
+CLAUDE.local.md

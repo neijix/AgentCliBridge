@@ -1,0 +1,3 @@
+{"event": "SessionUpdate", "session_id": "s1"}
+{"event": "StreamError", "message": "Failed to authenticate: OAuth session expired and could not be refreshed", "code": "agent_error"}
+{"event": "Completed", "returncode": 0}

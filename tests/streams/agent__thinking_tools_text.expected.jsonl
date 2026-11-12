@@ -1,0 +1,6 @@
+{"event": "SessionUpdate", "session_id": "c1"}
+{"event": "ThinkingDelta", "text": "I will read"}
+{"event": "ToolCall", "call_id": "k1", "name": "shell", "arguments": {"command": "ls agentdesk", "description": "List"}}
+{"event": "ToolResult", "call_id": "k1", "output": "hub\n", "is_error": false, "raw": "{\"success\": {\"exitCode\": 0, \"stdout\": \"hub\\n\", \"interleavedOutput\": \"hub\\n\"}}"}
+{"event": "TextDelta", "text": "One."}
+{"event": "Completed", "returncode": 0}

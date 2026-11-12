@@ -1,0 +1,8 @@
+{"event": "ThinkingDelta", "text": "I should"}
+{"event": "ToolCall", "call_id": "x", "name": "bash", "arguments": {"command": "ls"}}
+{"event": "ToolResult", "call_id": "x", "output": "hub\n", "is_error": false, "raw": "{\"result\": {\"content\": \"hub\\n\"}}"}
+{"event": "TextDelta", "text": "The "}
+{"event": "TextDelta", "text": "answer."}
+{"event": "TextDelta", "text": " Also this."}
+{"event": "SessionUpdate", "session_id": "p1"}
+{"event": "Completed", "returncode": 0}

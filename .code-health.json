@@ -1,0 +1,43 @@
+{
+  "limits": {
+    "file_lines": 800,
+    "function_lines": 80,
+    "function_ccn": 20,
+    "duplicate_lines": 10
+  },
+  "exclude": [],
+  "baseline": {
+    "file_lines": {
+      "agent_cli_bridge/cli_status.py": 875,
+      "tests/test_cli_status.py": 953,
+      "tests/ui/models.test.cjs": 1098
+    },
+    "function_lines": {
+      "agent_cli_bridge/argv.py::build_argv": 171,
+      "agent_cli_bridge/runner.py::_run_turn": 250,
+      "agent_cli_bridge/runner.py::run_agent": 97,
+      "agent_cli_bridge/ui/stream.js::(anonymous)": 152,
+      "tests/ui/models.test.cjs::fakeHost": 611
+    },
+    "function_ccn": {
+      "agent_cli_bridge/cli_status.py::uninstall_plan": 22,
+      "agent_cli_bridge/cli_status.py::update_plan": 25,
+      "agent_cli_bridge/model_catalog.py::merge": 23,
+      "agent_cli_bridge/model_catalog.py::parse_gateway_models": 23,
+      "agent_cli_bridge/model_catalog.py::refresh": 21,
+      "agent_cli_bridge/model_ranking.py::parse_leaderboard_models": 28,
+      "agent_cli_bridge/runner.py::_run_turn": 64
+    },
+    "duplicate_lines": {
+      "agent_cli_bridge/cli_status.py": 10,
+      "agent_cli_bridge/runner.py": 26,
+      "agent_cli_bridge/ui/chatbox.css": 12,
+      "agent_cli_bridge/ui/settings.css": 12,
+      "agent_cli_bridge/wire.py": 12,
+      "tests/test_cli_status.py": 10,
+      "tests/test_injection_guard.py": 10,
+      "tests/test_web_scout.py": 10,
+      "tests/test_wire.py": 12
+    }
+  }
+}

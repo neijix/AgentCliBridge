@@ -1,0 +1,5 @@
+{"type": "system", "subtype": "init", "session_id": "g1"}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "c0", "name": "read_file", "input": {"target_file": "pyproject.toml"}}, {"type": "tool_use", "id": "c1", "name": "run_terminal_command", "input": {"command": "ls"}}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "c0", "content": "{\"type\": \"ReadFile\", \"FileContent\": {\"content\": \"1\\u2192name\"}}", "is_error": false}, {"type": "tool_result", "tool_use_id": "c1", "content": "{\"type\": \"Bash\", \"output\": [27, 91, 51, 52, 109, 104, 117, 98, 27, 91, 51, 57, 59, 52, 57, 109, 27, 91, 48, 109, 10, 110, 111, 100, 101, 10]}", "is_error": false}]}}
+{"type": "stream_event", "event": {"type": "content_block_delta", "index": 1, "delta": {"type": "text_delta", "text": "Done."}}}
+{"type": "result", "subtype": "success", "result": "Done.", "session_id": "g1"}
