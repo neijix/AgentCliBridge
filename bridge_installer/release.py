@@ -246,7 +246,7 @@ def parse_sums(text: str) -> dict[str, str]:
 
 
 def write_sums(files: Iterable[Path], out: Path) -> Path:
-    Path(out).write_text(sums_text(files), encoding="utf-8")
+    Path(out).write_bytes(sums_text(files).encode("utf-8"))  # LF on every OS: sha256sum -c reads it
     return Path(out)
 
 

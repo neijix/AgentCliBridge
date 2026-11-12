@@ -1,4 +1,4 @@
-"""The snapshot archive is the same bytes on every OS, whatever the builder's git line-ending settings."""
+"""Release files are the same bytes on every OS: the snapshot whatever the git line-ending settings, SHA256SUMS with LF."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from bridge_installer.release import build_snapshot
+from bridge_installer.release import build_snapshot, write_sums
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git is not installed")
 
@@ -43,3 +43,10 @@ def test_a_crlf_checkout_setting_does_not_change_the_snapshot(tmp_path: Path) ->
     crlf = build_snapshot(tmp_path / "crlf", repo_dir=repo, repo="o/r")
     assert plain.read_bytes() == crlf.read_bytes()
     assert not any(b"\r\n" in data for data in _members(crlf).values())
+
+
+def test_sha256sums_has_lf_line_endings_on_every_os(tmp_path: Path):
+    asset = tmp_path / "a.deb"
+    asset.write_bytes(b"x")
+    out = write_sums([asset], tmp_path / "SHA256SUMS")
+    assert out.read_bytes().endswith(b"  a.deb\n") and b"\r" not in out.read_bytes()
