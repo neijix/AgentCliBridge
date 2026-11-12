@@ -1,0 +1,12 @@
+{
+  "description": "Two tool parts share a call_id: a result completes the LAST one (the search walks parts from the end), so the first part stays open.",
+  "frames": [
+    ["tool_call", {"v": 1, "call_id": "c1", "name": "Read", "arguments": {"file_path": "a"}}],
+    ["tool_call", {"v": 1, "call_id": "c1", "name": "Read", "arguments": {"file_path": "b"}}],
+    ["tool_result", {"v": 1, "call_id": "c1", "output": "second", "is_error": false}]
+  ],
+  "parts": [
+    {"type": "tool", "call_id": "c1", "name": "Read", "arguments": {"file_path": "a"}, "output": "", "is_error": false, "done": false},
+    {"type": "tool", "call_id": "c1", "name": "Read", "arguments": {"file_path": "b"}, "output": "second", "is_error": false, "done": true}
+  ]
+}

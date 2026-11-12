@@ -1,0 +1,108 @@
+#!/bin/sh
+# AgentCliBridge .pkg postinstall. Runs under a current-user-home install (no administrator) and does
+# three things, nothing else:
+#   1. unpacks the snapshot + twins (setup.tar.gz, beside this script) into
+#      <folder of the .pkg>/agentclibridge-<version>-setup, owned by the logged-in user;
+#   2. refuses, writing nothing, when that folder would not land beside the downloaded .pkg
+#      (Installer's sandbox or a temporary folder);
+#   3. opens Terminal on <setup folder>/setup.sh.
+# It writes nothing in $HOME, and never reads it.
+#
+# Installer's arguments: $1 the installer package's path (the .pkg the user opened), $2 the
+# install location, $3 the destination volume, $4 the root of the system folder. Only $1 is used.
+# Installer sends the script's output to /var/log/install.log, so every message goes to stderr.
+set -eu
+
+say() { echo "agentclibridge postinstall: $*" >&2; }
+die() {
+  say "ERROR: $*"
+  exit 1
+}
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+PKG="${1:-}"
+say "arguments: [$*] PACKAGE_PATH=[${PACKAGE_PATH:-}]"
+
+[ -f "$HERE/VERSION" ] || die "$HERE/VERSION is missing: this package was not built by build-pkg.sh"
+VERSION="$(cat "$HERE/VERSION")"
+case "$VERSION" in
+  "" | *[!0-9A-Za-z.+-]*) die "the package version '$VERSION' is not a SemVer string" ;;
+esac
+[ -f "$HERE/setup.tar.gz" ] || die "$HERE/setup.tar.gz is missing: this package was not built by build-pkg.sh"
+
+# Where Installer is not the user's: its sandbox and every temporary folder. /tmp, /var and
+# /private are links on macOS, so the check runs on the path as given and as resolved.
+in_temp() {
+  case "$1" in
+    /tmp | /tmp/* | /private/tmp | /private/tmp/* | /var | /var/* | /private/var | /private/var/*) return 0 ;;
+    */PKInstallSandbox* | */com.apple.installer* ) return 0 ;;
+  esac
+  return 1
+}
+
+case "$PKG" in
+  /*) ;;
+  *) die "the package path '$PKG' (argument 1) is not an absolute path: cannot tell where the .pkg was downloaded" ;;
+esac
+case "$PKG" in
+  *.pkg | *.mpkg) ;;
+  *) die "argument 1 '$PKG' is not a .pkg path: cannot tell where the .pkg was downloaded" ;;
+esac
+in_temp "$PKG" && die "the package is at '$PKG', inside a temporary or Installer sandbox folder, not where it was downloaded: nothing was written. Move the .pkg to Downloads and open it again."
+[ -e "$PKG" ] || die "the package '$PKG' (argument 1) does not exist: cannot tell where the .pkg was downloaded"
+
+DOWNLOADS="$(cd "$(dirname "$PKG")" && pwd -P)" || die "cannot enter the folder of '$PKG'"
+in_temp "$DOWNLOADS" && die "the package's folder resolves to '$DOWNLOADS', a temporary or Installer sandbox folder: nothing was written. Move the .pkg to Downloads and open it again."
+[ -w "$DOWNLOADS" ] || die "'$DOWNLOADS' is not writable by this user: nothing was written"
+
+TARGET="$DOWNLOADS/agentclibridge-$VERSION-setup"
+SCRIPT="$TARGET/setup.sh"
+
+# Installer may run the script as root: then the folder goes to the logged-in user, and Terminal
+# is opened in that user's session.
+RUN_AS=""
+if [ "$(id -u)" = "0" ]; then
+  RUN_AS="$(stat -f %Su /dev/console 2>/dev/null || true)"
+  case "$RUN_AS" in
+    "" | root | loginwindow) die "running as root with no logged-in user at the console: nothing was written" ;;
+  esac
+fi
+
+[ -L "$TARGET" ] && die "'$TARGET' is a link: nothing was written"
+CREATED=""
+if [ -e "$TARGET" ]; then
+  [ -d "$TARGET" ] && [ -f "$SCRIPT" ] || die "'$TARGET' exists and is not an AgentCliBridge setup folder: nothing was written"
+  say "reusing the setup folder $TARGET (its app/ is replaced)"
+  rm -rf "$TARGET/app"
+else
+  mkdir "$TARGET" || die "cannot create $TARGET"
+  CREATED=1
+fi
+
+fail_cleanup() {
+  [ -z "$CREATED" ] || rm -rf "$TARGET"
+}
+
+say "unpacking into $TARGET"
+if ! tar -xzf "$HERE/setup.tar.gz" -C "$TARGET" --no-same-owner; then
+  fail_cleanup
+  die "could not unpack setup.tar.gz into $TARGET"
+fi
+if [ ! -f "$SCRIPT" ] || [ ! -f "$TARGET/app/agentclibridge-snapshot.json" ]; then
+  fail_cleanup
+  die "the unpacked folder $TARGET holds no setup.sh and app/ snapshot"
+fi
+chmod 755 "$SCRIPT"
+
+if [ -n "$RUN_AS" ]; then
+  chown -R "$RUN_AS:$(id -gn "$RUN_AS")" "$TARGET" || die "cannot give $TARGET to $RUN_AS"
+fi
+
+say "opening Terminal on $SCRIPT"
+if [ -n "$RUN_AS" ]; then
+  launchctl asuser "$(id -u "$RUN_AS")" sudo -u "$RUN_AS" open -a Terminal "$SCRIPT" ||
+    die "could not open Terminal; the setup folder is $TARGET, run setup.sh there"
+else
+  open -a Terminal "$SCRIPT" || die "could not open Terminal; the setup folder is $TARGET, run setup.sh there"
+fi
+say "done: $TARGET"

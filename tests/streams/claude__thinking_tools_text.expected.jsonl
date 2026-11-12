@@ -1,0 +1,7 @@
+{"event": "SessionUpdate", "session_id": "s1"}
+{"event": "ThinkingDelta", "text": "Let me look"}
+{"event": "ToolCall", "call_id": "t1", "name": "Bash", "arguments": {"command": "ls", "description": "List"}}
+{"event": "ToolResult", "call_id": "t1", "output": "a\nb", "is_error": false}
+{"event": "ToolResult", "call_id": "t2", "output": "denied", "is_error": true, "raw": "[{\"type\": \"text\", \"text\": \"denied\"}]"}
+{"event": "TextDelta", "text": "Two files."}
+{"event": "Completed", "returncode": 0}

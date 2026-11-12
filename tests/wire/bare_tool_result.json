@@ -1,0 +1,12 @@
+{
+  "description": "A tool_result carrying only its call_id completes the tool part with an empty output and is_error false; a tool_call missing name/arguments stores them as null. Python and JS agree on the missing keys.",
+  "frames": [
+    ["tool_call", {"v": 1, "call_id": "c1", "name": "Read", "arguments": {"file_path": "a"}}],
+    ["tool_result", {"v": 1, "call_id": "c1"}],
+    ["tool_call", {"v": 1, "call_id": "c2"}]
+  ],
+  "parts": [
+    {"type": "tool", "call_id": "c1", "name": "Read", "arguments": {"file_path": "a"}, "output": "", "is_error": false, "done": true},
+    {"type": "tool", "call_id": "c2", "name": null, "arguments": null, "output": "", "is_error": false, "done": false}
+  ]
+}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AgentCliBridge installer: a payload-free product archive. Installing only for the current user
+     (no administrator): the postinstall unpacks the setup folder beside the downloaded .pkg and
+     opens Terminal on setup.sh. build-pkg.sh replaces @VERSION@ with the release version. -->
+<installer-gui-script minSpecVersion="2">
+    <title>AgentCliBridge</title>
+    <options customize="never" require-scripts="false"/>
+    <domains enable_anywhere="false" enable_currentUserHome="true" enable_localSystem="false"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="org.agentclibridge.setup"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="org.agentclibridge.setup" visible="false" title="AgentCliBridge setup">
+        <pkg-ref id="org.agentclibridge.setup"/>
+    </choice>
+    <pkg-ref id="org.agentclibridge.setup" version="@VERSION@" auth="none" onConclusion="none">AgentCliBridge-setup.pkg</pkg-ref>
+</installer-gui-script>

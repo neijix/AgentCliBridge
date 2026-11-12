@@ -1,0 +1,7 @@
+{"event": "SessionUpdate", "session_id": "g1"}
+{"event": "ToolCall", "call_id": "c0", "name": "read_file", "arguments": {"target_file": "pyproject.toml"}}
+{"event": "ToolCall", "call_id": "c1", "name": "run_terminal_command", "arguments": {"command": "ls"}}
+{"event": "ToolResult", "call_id": "c0", "output": "1\u2192name", "is_error": false, "raw": "{\"type\": \"ReadFile\", \"FileContent\": {\"content\": \"1\\u2192name\"}}"}
+{"event": "ToolResult", "call_id": "c1", "output": "hub\nnode\n", "is_error": false, "raw": "{\"type\": \"Bash\", \"output\": [27, 91, 51, 52, 109, 104, 117, 98, 27, 91, 51, 57, 59, 52, 57, 109, 27, 91, 48, 109, 10, 110, 111, 100, 101, 10]}"}
+{"event": "TextDelta", "text": "Done."}
+{"event": "Completed", "returncode": 0}

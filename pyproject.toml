@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "AgentCliBridge"
+version = "0.3.0"
+description = "Spawn local AI coding CLIs (Claude Code, Cursor Agent, Gemini CLI, Antigravity, Grok, Copilot, OpenCode) as streaming chat backends — official binaries, documented headless flags, your own logins."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+# Core is stdlib-only by design: asyncio subprocess + json. Server extras come later.
+dependencies = []
+
+[project.optional-dependencies]
+server = ["fastapi>=0.110", "uvicorn>=0.27", "httpx>=0.27"]
+dev = ["pytest>=8", "fastapi>=0.110", "uvicorn>=0.27", "httpx>=0.27", "ruff>=0.9", "mypy>=1.13"]
+
+[project.scripts]
+agent-cli-bridge-gateway = "agent_cli_bridge.gateway:main"
+
+[tool.setuptools.packages.find]
+include = ["agent_cli_bridge*"]
+
+[tool.setuptools.package-data]
+agent_cli_bridge = ["ui/*.js", "ui/*.css"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP", "SIM", "I"]
+# E501: long lines are left to judgment (prompts, messages read better unwrapped).
+ignore = ["E501"]
+
+[tool.mypy]
+# The library's types are its contract with hosts (events, TurnInput, AgentHost): CI keeps them checked.
+python_version = "3.11"
+files = ["agent_cli_bridge", "bridge_installer"]
+warn_unused_ignores = true
+warn_redundant_casts = true

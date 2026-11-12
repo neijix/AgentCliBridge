@@ -1,0 +1,3 @@
+{"event": "SessionUpdate", "session_id": "ses_2"}
+{"event": "StreamError", "message": "Upstream request failed: Model is unavailable.", "code": "agent_error"}
+{"event": "Completed", "returncode": 0}

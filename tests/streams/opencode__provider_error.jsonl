@@ -1,0 +1,1 @@
+{"type": "error", "sessionID": "ses_2", "error": {"name": "APIError", "data": {"message": "Upstream request failed: Model is unavailable.", "statusCode": 400}}}

@@ -1,0 +1,6 @@
+#!/bin/sh
+# AgentCliBridge setup launcher, installed by the .deb as /usr/bin/agentclibridge-setup. Every user
+# runs it to install the gateway into a folder of their own: it hands every argument to the
+# bootstrap twin the package placed in /opt/agentclibridge, which asks for the folder first.
+# Writes nothing itself.
+exec /opt/agentclibridge/setup.sh "$@"
