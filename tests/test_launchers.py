@@ -544,7 +544,7 @@ def test_install_start_leaves_a_port_that_already_answers(box: Launchers):
     port = free_port()
     box.write_env(port)
     server = box.spawn([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"], box.env(), cwd=box.tmp)
-    assert wait_until(lambda: server.pid in listener_pids(port))
+    assert wait_until(lambda: server.pid in listener_pids(port)), (server.poll(), listener_pids(port))
     result = _install(box, box.env())
     assert result.returncode == 0, result.stdout + result.stderr
     assert "already answers" in result.stdout

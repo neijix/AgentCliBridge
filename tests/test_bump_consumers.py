@@ -136,6 +136,15 @@ def test_summary_counts_each_status_and_names_the_problems() -> None:
     assert bump_consumers.summary([]) == ""
 
 
+@pytest.fixture(autouse=True)
+def _git_identity(monkeypatch: pytest.MonkeyPatch) -> None:
+    # bump() commits as the user; a fresh CI runner has no git identity.
+    for key in ("GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"):
+        monkeypatch.setenv(key, "t")
+    for key in ("GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"):
+        monkeypatch.setenv(key, "t@t")
+
+
 def _git_in(cwd: Path, *argv: str) -> str:
     done = subprocess.run(
         ["git", "-c", "user.name=t", "-c", "user.email=t@t", *argv], cwd=cwd, check=True, capture_output=True, text=True

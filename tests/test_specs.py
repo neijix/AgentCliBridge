@@ -229,10 +229,13 @@ def test_code_root_uses_home_code_and_home_CODE(tmp_path, monkeypatch):
     monkeypatch.setattr(specs.sys, "prefix", str(tmp_path / "app" / ".venv"))
     monkeypatch.delenv("AI_CODE_ROOT", raising=False)
 
+    # samefile: on a case-insensitive disk (macOS, Windows) ~/Code and ~/CODE are one folder.
     upper = _fake_checkout(home / "CODE" / "AgentCliBridge")
-    assert specs.bridge_checkout() == upper
-    lower = _fake_checkout(home / "Code" / "AgentCliBridge")
-    assert specs.bridge_checkout() == lower
+    assert specs.bridge_checkout().samefile(upper)
+    lower = home / "Code" / "AgentCliBridge"
+    if not lower.exists():
+        _fake_checkout(lower)
+    assert specs.bridge_checkout().samefile(lower)
     monkeypatch.setenv("AI_CODE_ROOT", str(tmp_path / "Other"))
     assert specs.bridge_checkout() is None
     pinned = _fake_checkout(tmp_path / "Other" / "AgentCliBridge")

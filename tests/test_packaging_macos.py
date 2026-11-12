@@ -442,6 +442,7 @@ def test_build_refuses_an_archive_without_the_manifest(tmp_path):
     assert MANIFEST_NAME in done.stderr
 
 
+@pytest.mark.skipif(shutil.which("pkgbuild", path=SYSTEM_PATH) is not None, reason="pkgbuild ships in /usr/bin here")
 def test_build_without_pkgbuild_stops_naming_it(tmp_path):
     snapshot = _fake_snapshot(tmp_path)
 

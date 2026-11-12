@@ -207,7 +207,8 @@ def build_snapshot(out_dir: Path, *, repo_dir: Path | None = None, tag: str | No
     ref, commit = resolve_ref(root, tag)
     version = resolve_version(tag, dunder_version(root, ref))
     manifest = Manifest(version=version, commit=commit, repo=resolve_repo(root, repo))
-    kept = _collect(_git(root, "archive", "--format=tar", ref).stdout)
+    # The bytes of the commit, never this checkout's line-ending settings (a Windows runner has autocrlf on).
+    kept = _collect(_git(root, "-c", "core.autocrlf=false", "-c", "core.eol=lf", "archive", "--format=tar", ref).stdout)
     target = Path(out_dir) / snapshot_name(version)
     _write_archive(kept, manifest, target)
     return target
