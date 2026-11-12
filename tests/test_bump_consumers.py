@@ -138,11 +138,11 @@ def test_summary_counts_each_status_and_names_the_problems() -> None:
 
 @pytest.fixture(autouse=True)
 def _git_identity(monkeypatch: pytest.MonkeyPatch) -> None:
-    # bump() commits as the user; a fresh CI runner has no git identity.
-    for key in ("GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"):
-        monkeypatch.setenv(key, "t")
-    for key in ("GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"):
-        monkeypatch.setenv(key, "t@t")
+    # bump() commits as the user; a fresh CI runner has no git identity. Its git env is read at import.
+    identity = {"GIT_AUTHOR_NAME": "t", "GIT_COMMITTER_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_EMAIL": "t@t"}
+    for key, value in identity.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setattr(bump_consumers, "_GIT_ENV", {**bump_consumers._GIT_ENV, **identity})
 
 
 def _git_in(cwd: Path, *argv: str) -> str:
