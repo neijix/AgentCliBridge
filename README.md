@@ -48,9 +48,14 @@ In GitHub Actions use the job's `GITHUB_TOKEN` with `permissions: packages: read
 ### Release
 
 Tag `dotnet-vX.Y.Z` (never `vX.Y.Z`: those are the Python line's, and its updater reads the
-Latest release, so a C# release is never marked Latest); `.github/workflows/publish.yml` tests,
-packs both packages with that version and pushes to
-`https://nuget.pkg.github.com/neijix/index.json` using the job's `GITHUB_TOKEN`. No stored secret.
+Latest release, so a C# release is never marked Latest), or run `publish.yml` by hand on an
+existing tag (`gh workflow run publish.yml -f tag=dotnet-vX.Y.Z`). `.github/workflows/publish.yml`
+tests, packs `D3sk.AgentCli` with that version and pushes it to
+`https://nuget.pkg.github.com/neijix/index.json` with the job's `GITHUB_TOKEN`, and to nuget.org by
+[Trusted Publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing). No API key is
+stored: the account that owns the package adds a policy (nuget.org → user name → Trusted Publishing)
+with this repository's owner, the repository name and the workflow file `publish.yml`. The job logs
+in as the repository owner, or as the repository variable `NUGET_USER` when set.
 
 ## Licence
 
