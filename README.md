@@ -22,8 +22,10 @@ This project is built to stay inside each vendor's intended product surface:
   No vendor backend API is ever called directly; no tokens are extracted or replayed.
   The one exception reads a list, not a model: when Claude Code goes through a company gateway
   (`ANTHROPIC_BASE_URL` on a host that is not Anthropic's), that gateway's `/v1/models` (the
-  URL Claude Code's own model discovery reads) is fetched **without any credentials**, to offer
-  its models in a picker. Anthropic's API is never asked.
+  URL Claude Code's own model discovery reads) is fetched to offer its models in a picker, with
+  the headers Claude Code itself sends that same URL (`ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`,
+  `ANTHROPIC_CUSTOM_HEADERS`) — only over https or to a loopback host, never after a redirect.
+  Anthropic's API is never asked, and no Anthropic or claude.ai login is read.
 - **Your own login** — each CLI authenticates with your account (OAuth/keychain);
   your plan's quotas and rate limits apply exactly as if you typed in a terminal.
 - **Local and single-user** — designed for `127.0.0.1`, one human. Do **not** expose

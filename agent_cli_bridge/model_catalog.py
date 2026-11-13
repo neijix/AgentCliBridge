@@ -13,11 +13,12 @@ that curated list:
 
 Claude Code through a company gateway (``claude_account.claude_gateway``: ``ANTHROPIC_BASE_URL``
 on a host that is not Anthropic's) offers what that gateway lists. Its ``/v1/models`` is read the
-way Claude Code's own model discovery reads it (``?limit=1000``, no redirect), but with **no
-credentials** — only a gateway that answers without a token is listed, and Anthropic's API never
-is. The gateway's list is that company's curated list: its first read is offered as usual, with
-each model's ``display_name`` (``labels``) and price; what it lists later is new; a model it says
-cannot call tools is optional (an agent cannot run without them). Claude Code's aliases and
+way Claude Code's own model discovery reads it (``?limit=1000``, no redirect), with the headers
+Claude Code sends that same URL (``claude_account.claude_gateway_headers``: its token, API key and
+custom headers) — but only over https or to a loopback host, never to another host after a
+redirect; Anthropic's API is never read. The gateway's list is that company's curated list: its
+first read is offered as usual, with each model's ``display_name`` (``labels``) and price; what
+it lists later is new; a model it says cannot call tools is optional (an agent cannot run without them). Claude Code's aliases and
 pinned ids stay — it resolves them itself (``ANTHROPIC_DEFAULT_OPUS_MODEL``…). Whether the
 gateway can run a listed model under Claude Code is its own setup: one it cannot answers the turn
 with its error. A gateway that does not answer (it may start after the host) is asked again a
@@ -38,6 +39,7 @@ timer without spawning a process each time.
 """
 
 import http.client
+import ipaddress
 import json
 import logging
 import math
@@ -46,7 +48,7 @@ import re
 import subprocess
 import time
 import urllib.error
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, NamedTuple
 from urllib.parse import urlsplit
@@ -296,6 +298,21 @@ def parse_gateway_models(data: Any) -> GatewayModels:
     return GatewayModels(list(ids), prices, labels, toolless)
 
 
+def may_carry_credentials(url: str) -> bool:
+    """Whether a gateway's credentials may go to ``url``: https, or a loopback host (never cleartext
+    across the network, even though Claude Code itself would send them there)."""
+    parts = urlsplit(url)
+    if parts.scheme.lower() == "https":
+        return True
+    host = (parts.hostname or "").lower()
+    if host == "localhost":
+        return True
+    try:
+        return parts.scheme.lower() == "http" and ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def _host_port(url: str) -> str:
     """``host`` or ``host:port`` of a URL — what a log line or a saved key names a gateway by."""
     parts = urlsplit(url)
@@ -307,13 +324,13 @@ def _host_port(url: str) -> str:
     return f"{host}:{port}" if port else host
 
 
-def fetch_json(url: str, timeout: float = GATEWAY_TIMEOUT) -> Any:
-    """GET ``url`` as JSON, at most ``GATEWAY_MAX_BYTES``, via the shared size-limited GET."""
+def fetch_json(url: str, timeout: float = GATEWAY_TIMEOUT, headers: Mapping[str, str] | None = None) -> Any:
+    """GET ``url`` as JSON, at most ``GATEWAY_MAX_BYTES``, via the shared size-limited GET (no redirect)."""
     body = get_bytes(
         url,
         GATEWAY_MAX_BYTES,
         timeout=timeout,
-        headers={"Accept": "application/json", "User-Agent": USER_AGENT},
+        headers={**(headers or {}), "Accept": "application/json", "User-Agent": USER_AGENT},
     )
     return json.loads(body.decode("utf-8"))
 
@@ -326,7 +343,7 @@ class ModelCatalog:
         known_path: Path,
         *,
         run: Callable[[list[str]], str] = run_list,
-        fetch: Callable[[str], Any] = fetch_json,
+        fetch: Callable[..., Any] = fetch_json,  # (url) or (url, headers=…) for a gateway that wants them
         fetch_rankings: Callable[[], dict[str, dict[str, list[int | None]]]] | None = None,
         clock: Callable[[], float] = time.time,
     ) -> None:
@@ -442,12 +459,18 @@ class ModelCatalog:
             log.warning("Could not save %s: %s", self._known_path, exc)
 
     def refresh(
-        self, agents: list[dict[str, Any]], *, force: bool = False, claude_gateway: str | None = None
+        self,
+        agents: list[dict[str, Any]],
+        *,
+        force: bool = False,
+        claude_gateway: str | None = None,
+        claude_gateway_headers: Mapping[str, str] | None = None,
     ) -> None:
         """Ask every CLI that can list its models and whose cached answer expired (blocking).
 
         ``claude_gateway`` is the company gateway Claude Code talks to
-        (``claude_account.claude_gateway``): its list stands for Claude Code's.
+        (``claude_account.claude_gateway``): its list stands for Claude Code's. It is read with
+        ``claude_gateway_headers`` (``claude_account.claude_gateway_headers``) where they may go.
         Also refreshes the Artificial Analysis leaderboard ratings when expired, forced, or when any
         CLI's model list changed.
         """
@@ -456,7 +479,7 @@ class ModelCatalog:
             command = str(agent.get("command") or "")
             flavor = str(agent.get("flavor") or "")
             if flavor == "claude" and command and agent.get("binary_found"):
-                if self._refresh_gateway(command, claude_gateway, force=force):
+                if self._refresh_gateway(command, claude_gateway, claude_gateway_headers, force=force):
                     models_changed = True
                 continue
             args = LIST_ARGS.get(flavor)
@@ -486,7 +509,9 @@ class ModelCatalog:
             self._remember_baseline(command, offered(flavor, listed, prices))
         self._refresh_rankings(force=force or models_changed)
 
-    def _refresh_gateway(self, command: str, base_url: str | None, *, force: bool) -> bool:
+    def _refresh_gateway(
+        self, command: str, base_url: str | None, headers: Mapping[str, str] | None, *, force: bool
+    ) -> bool:
         """Read the models of the gateway Claude Code talks to, unless the cached answer is fresh."""
         if self._gateways.get(command) != base_url:
             self.forget(command)  # another gateway, or none any more: the last one's list is not offered
@@ -498,7 +523,9 @@ class ModelCatalog:
         prev_ids = cached[0] if cached else None
         self._gateways[command] = base_url
         try:
-            found = parse_gateway_models(self._fetch(gateway_models_url(base_url)))
+            url = gateway_models_url(base_url)
+            sent = dict(headers or {}) if may_carry_credentials(url) else {}
+            found = parse_gateway_models(self._fetch(url, headers=sent) if sent else self._fetch(url))
             if not found.ids:
                 raise ValueError("no model ids in the answer")
         except (OSError, ValueError, http.client.HTTPException) as exc:

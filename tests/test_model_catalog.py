@@ -15,6 +15,7 @@ from agent_cli_bridge.model_catalog import (
     fetch_json,
     is_listed,
     is_openrouter_promo,
+    may_carry_credentials,
     offered,
     parse_gateway_models,
     parse_models,
@@ -446,7 +447,7 @@ def test_a_gateway_not_up_yet_is_asked_again_a_minute_later_one_that_refuses_lat
     catalog.refresh([claude], claude_gateway=GATEWAY)
     assert len(calls) == 1 and catalog.merge(claude) == {"models": ["sonnet"], "new_models": []}
     clock.now += 61
-    failure["exc"] = urllib.error.HTTPError(GATEWAY, 401, "Unauthorized", {}, None)  # wants a token: never sent
+    failure["exc"] = urllib.error.HTTPError(GATEWAY, 401, "Unauthorized", {}, None)  # refuses: asked again later
     catalog.refresh([claude], claude_gateway=GATEWAY)
     assert len(calls) == 2
     clock.now += 61
@@ -489,14 +490,40 @@ def gateway():
     server.server_close()
 
 
-def test_a_gateway_is_read_without_credentials_and_a_redirect_is_refused(gateway):
+def test_a_gateway_gets_only_the_headers_it_is_given_and_a_redirect_is_refused(gateway):
     assert fetch_json(f"{gateway}/v1/models?limit=1000")["data"][0]["id"] == "claude-opus-5-5[1m]"
     path, headers = _Gateway.seen[0]
     assert path == "/v1/models?limit=1000"
     assert not {"authorization", "x-api-key", "cookie", "proxy-authorization"} & set(headers)
+    fetch_json(f"{gateway}/v1/models", headers={"Authorization": "Bearer t"})
+    assert _Gateway.seen[1][1]["authorization"] == "Bearer t"
     with pytest.raises(urllib.error.HTTPError):
-        fetch_json(f"{gateway}/moved")
-    assert [seen[0] for seen in _Gateway.seen] == ["/v1/models?limit=1000", "/moved"]  # never followed
+        fetch_json(f"{gateway}/moved", headers={"Authorization": "Bearer t"})
+    # The redirect is never followed, so the token never reaches where it points.
+    assert [seen[0] for seen in _Gateway.seen] == ["/v1/models?limit=1000", "/v1/models", "/moved"]
+
+
+def test_the_catalog_reads_a_gateway_with_its_credentials_only_over_https_or_loopback(tmp_path):
+    calls = []
+
+    def fetch(url, headers=None):
+        calls.append((url, headers))
+        return GATEWAY_ANSWER
+
+    claude = agent("claude", "claude", ["sonnet"])
+    token = {"Authorization": "Bearer t"}
+    for base in ("https://adb-1.azuredatabricks.net/ai-gateway/anthropic", "http://127.0.0.1:4000",
+                 "http://localhost:4000", "http://ai.example.com"):
+        ModelCatalog(tmp_path / "known.json", fetch=fetch).refresh(
+            [claude], claude_gateway=base, claude_gateway_headers=token
+        )
+    assert calls == [
+        ("https://adb-1.azuredatabricks.net/ai-gateway/anthropic/v1/models?limit=1000", token),
+        ("http://127.0.0.1:4000/v1/models?limit=1000", token),
+        ("http://localhost:4000/v1/models?limit=1000", token),
+        ("http://ai.example.com/v1/models?limit=1000", None),  # cleartext across the network: no token
+    ]
+    assert may_carry_credentials("https://ai.example.com") and not may_carry_credentials("ftp://127.0.0.1")
 
 
 def test_only_an_http_url_without_credentials_is_read_and_never_a_huge_answer(gateway):

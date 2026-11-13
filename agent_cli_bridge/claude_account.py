@@ -10,7 +10,8 @@ for every hello and agents update:
 - **personal** — signed in to claude.ai (Google or e-mail) on a Pro / Max / free organization.
 - ``None`` — neither can be told (no sign-in yet, a bare API key): the list shows no tag.
 
-``claude_gateway`` names that company gateway itself: ``model_catalog`` reads its model list.
+``claude_gateway`` names that company gateway itself, ``claude_gateway_headers`` the credentials
+Claude Code sends it: ``model_catalog`` reads its model list with them.
 
 A machine can hold one Claude Code profile per code root:
 ``~/.claude-profiles`` lists ``<root>\t<config dir>`` lines, and a session started inside a root
@@ -20,6 +21,7 @@ runs with ``CLAUDE_CONFIG_DIR`` set to its dir (``claude_profile_env``). Every r
 
 import json
 import os
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -133,6 +135,35 @@ def claude_gateway(home: Path, env: Mapping[str, str]) -> str | None:
     if _cloud(merged) or urlsplit(base_url).scheme.lower() not in ("http", "https"):
         return None
     return base_url if _gateway_host(base_url) else None
+
+
+_HEADER_NAME = re.compile(r"^[A-Za-z0-9!#$%&'*+.^_`|~-]{1,100}$")
+
+
+def claude_gateway_headers(home: Path, env: Mapping[str, str]) -> dict[str, str]:
+    """The headers Claude Code sends its company gateway, or ``{}`` when it talks to none.
+
+    ``ANTHROPIC_CUSTOM_HEADERS`` (``Name: value`` lines), then ``ANTHROPIC_API_KEY`` as
+    ``x-api-key`` and ``ANTHROPIC_AUTH_TOKEN`` as a bearer — what Claude Code itself sends that
+    same URL, so a gateway that lists its models only to a signed-in caller can be read.
+    An ``apiKeyHelper`` script is not run.
+    """
+    if claude_gateway(home, env) is None:
+        return {}
+    merged = _claude_env(home, env)
+    headers: dict[str, str] = {}
+    for line in merged.get("ANTHROPIC_CUSTOM_HEADERS", "").splitlines():
+        name, colon, value = line.partition(":")
+        name, value = name.strip(), value.strip()
+        if colon and _HEADER_NAME.match(name) and value and value.isprintable():
+            headers[name] = value
+    api_key = merged.get("ANTHROPIC_API_KEY", "").strip()
+    token = merged.get("ANTHROPIC_AUTH_TOKEN", "").strip()
+    if api_key.isprintable() and api_key:
+        headers["x-api-key"] = api_key
+    if token.isprintable() and token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
 
 
 def claude_account(home: Path, env: Mapping[str, str]) -> dict[str, str] | None:
