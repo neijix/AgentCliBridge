@@ -22,7 +22,7 @@ public class AgyArgvTests
     [Fact]
     public void Cwd_is_attached_with_add_dir()
     {
-        Assert.Equal(@"F:\Code\AgentDesk", After(Build(cwd: @"F:\Code\AgentDesk"), "--add-dir"));
+        Assert.Equal(@"C:\Work\Project", After(Build(cwd: @"C:\Work\Project"), "--add-dir"));
     }
 
     [Fact]

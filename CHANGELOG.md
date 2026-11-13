@@ -13,7 +13,7 @@ with its own `v*` tags; this file does not cover it.
 
 ## [dotnet-v0.1.0] — 2026-11-04
 
-First release of `D3sk.AgentCli`, the C# port of AgentCliBridge's CLI runner, for D3SKHAND.
+First release of `D3sk.AgentCli`, the C# port of AgentCliBridge's CLI runner.
 
 ### Added
 - Child turn runner: spawn with a given environment only, line streaming, result grace, timeout,

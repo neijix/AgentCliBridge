@@ -7,7 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Deterministic>true</Deterministic>
-    <!-- A Release build maps source paths to /_/: no builder home path in the DLL (D3SKHAND scans for one). -->
+    <!-- A Release build maps source paths to /_/: no builder home path in the DLL. -->
     <ContinuousIntegrationBuild Condition="'$(Configuration)' == 'Release'">true</ContinuousIntegrationBuild>
     <!-- Untagged builds; a dotnet-v<semver> tag overrides it in publish.yml. -->
     <Version>0.3.0</Version>

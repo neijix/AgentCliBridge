@@ -13,7 +13,7 @@ installer are on the [`python`](https://github.com/neijix/AgentCliBridge/tree/py
 
 `D3sk.AgentCli` runs the AI coding
 CLIs (Claude Code, Cursor, Gemini, Copilot, Grok, OpenCode) and folds their output streams into
-typed events. Package `D3sk.AgentCli`, used by D3SKHAND.
+typed events. Package `D3sk.AgentCli`.
 
 ### Frozen fixtures
 

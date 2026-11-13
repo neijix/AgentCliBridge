@@ -216,10 +216,10 @@ public sealed class ModelCatalogTests : IDisposable
         {"object": "list", "has_more": false, "data": [
           {"id": "claude-opus-5-5[1m]", "display_name": "Claude Opus 5.5", "type": "chat", "output_modalities": ["text"],
            "capabilities": {"tools": true}, "info": {"input_cost_per_token": 3.0000075e-06, "output_cost_per_token": 1.4999985e-05}},
-          {"id": "databricks-gpt-5-5", "display_name": "GPT\n5.5\u0000", "type": "chat", "capabilities": {"tools": true},
+          {"id": "gateway-gpt-5-5", "display_name": "GPT\n5.5\u0000", "type": "chat", "capabilities": {"tools": true},
            "info": {"input_cost_per_token": 5.00003e-06, "output_cost_per_token": 2.999997e-05}},
           {"id": "sonnet", "display_name": "Claude Sonnet (gateway)", "type": "chat"},
-          {"id": "azr-gpt-6-luna", "display_name": "Azr Gpt 6 Luna", "type": "chat", "capabilities": {"tools": false},
+          {"id": "gw-gpt-6-luna", "display_name": "Gw Gpt 6 Luna", "type": "chat", "capabilities": {"tools": false},
            "info": {"input_cost_per_token": 7.5e-08, "output_cost_per_token": 3.75e-07}},
           {"id": "unpriced-model", "display_name": "unpriced-model", "info": {"input_cost_per_token": 0, "output_cost_per_token": 0}},
           {"id": "text-embedding-4", "type": "embedding"},
@@ -233,19 +233,19 @@ public sealed class ModelCatalogTests : IDisposable
     public void A_gateway_answer_gives_ids_labels_prices_and_the_models_without_tools()
     {
         var found = GatewayModels.Parse(GatewayAnswer());
-        Assert.Equal(["claude-opus-5-5[1m]", "databricks-gpt-5-5", "sonnet", "azr-gpt-6-luna", "unpriced-model"], found.Ids);
+        Assert.Equal(["claude-opus-5-5[1m]", "gateway-gpt-5-5", "sonnet", "gw-gpt-6-luna", "unpriced-model"], found.Ids);
         Assert.Equal(new Dictionary<string, string>
         {
             ["claude-opus-5-5[1m]"] = "Claude Opus 5.5",
-            ["databricks-gpt-5-5"] = "GPT 5.5",
+            ["gateway-gpt-5-5"] = "GPT 5.5",
             ["sonnet"] = "Claude Sonnet (gateway)",
-            ["azr-gpt-6-luna"] = "Azr Gpt 6 Luna",
+            ["gw-gpt-6-luna"] = "Gw Gpt 6 Luna",
         }, found.Labels);
         Assert.Equal([3.0, 15.0], found.Prices["claude-opus-5-5[1m]"]);
-        Assert.Equal([5.0, 30.0], found.Prices["databricks-gpt-5-5"]);
-        Assert.Equal([0.075, 0.375], found.Prices["azr-gpt-6-luna"]);
+        Assert.Equal([5.0, 30.0], found.Prices["gateway-gpt-5-5"]);
+        Assert.Equal([0.075, 0.375], found.Prices["gw-gpt-6-luna"]);
         Assert.Equal(3, found.Prices.Count);
-        Assert.Equal(["azr-gpt-6-luna"], found.Toolless);
+        Assert.Equal(["gw-gpt-6-luna"], found.Toolless);
         Assert.Equal(["gpt-6"], GatewayModels.Parse(JsonNode.Parse("""{"data": [{"id": "gpt-6", "object": "model"}]}""")).Ids);
         Assert.Empty(GatewayModels.Parse(JsonNode.Parse("""{"data": "nope"}""")).Ids);
         Assert.Empty(GatewayModels.Parse(JsonNode.Parse("""["claude-opus-5-5"]""")).Ids);
@@ -265,20 +265,20 @@ public sealed class ModelCatalogTests : IDisposable
         catalog.Refresh([claude], claudeGateway: Gateway + "/");
         Assert.Equal(["http://127.0.0.1:4000/v1/models?limit=1000"], urls);
         var merged = catalog.Merge(claude);
-        Assert.Equal(["sonnet", "opus", "claude-opus-5-5[1m]", "databricks-gpt-5-5", "unpriced-model", "azr-gpt-6-luna"], merged.Models);
+        Assert.Equal(["sonnet", "opus", "claude-opus-5-5[1m]", "gateway-gpt-5-5", "unpriced-model", "gw-gpt-6-luna"], merged.Models);
         Assert.Empty(merged.NewModels);
-        Assert.Equal(["azr-gpt-6-luna"], merged.OptionalModels);
+        Assert.Equal(["gw-gpt-6-luna"], merged.OptionalModels);
         Assert.Equal("Claude Sonnet (gateway)", merged.Labels!["sonnet"]);
         Assert.Equal("Claude Opus 5.5", merged.Labels["claude-opus-5-5[1m]"]);
-        Assert.Equal([5.0, 30.0], merged.Prices!["databricks-gpt-5-5"]);
+        Assert.Equal([5.0, 30.0], merged.Prices!["gateway-gpt-5-5"]);
         var known = JsonNode.Parse(File.ReadAllText(Known))!["claude@127.0.0.1:4000"]!.AsArray().Select(n => n!.ToString());
-        Assert.Equal(["claude-opus-5-5[1m]", "databricks-gpt-5-5", "sonnet", "unpriced-model"], known);
+        Assert.Equal(["claude-opus-5-5[1m]", "gateway-gpt-5-5", "sonnet", "unpriced-model"], known);
 
-        answer["data"]!.AsArray().Add(JsonNode.Parse("""{"id": "databricks-gemini-3-9-pro", "display_name": "Gemini 3.9 Pro", "type": "chat"}"""));
+        answer["data"]!.AsArray().Add(JsonNode.Parse("""{"id": "gateway-gemini-3-9-pro", "display_name": "Gemini 3.9 Pro", "type": "chat"}"""));
         var later = Catalog(fetch: Fetch);
         later.Refresh([claude], claudeGateway: Gateway);
-        Assert.Equal(["databricks-gemini-3-9-pro"], later.Merge(claude).NewModels);
-        Assert.Equal("Gemini 3.9 Pro", later.Merge(claude).Labels!["databricks-gemini-3-9-pro"]);
+        Assert.Equal(["gateway-gemini-3-9-pro"], later.Merge(claude).NewModels);
+        Assert.Equal("Gemini 3.9 Pro", later.Merge(claude).Labels!["gateway-gemini-3-9-pro"]);
     }
 
     [Fact]
@@ -293,7 +293,7 @@ public sealed class ModelCatalogTests : IDisposable
         Assert.Empty(urls);
         Assert.Equal(["sonnet", "opus"], catalog.Merge(claude).Models);
         catalog.Refresh([claude], claudeGateway: Gateway);
-        Assert.Contains("databricks-gpt-5-5", catalog.Merge(claude).Models);
+        Assert.Contains("gateway-gpt-5-5", catalog.Merge(claude).Models);
         catalog.Refresh([claude]); // ANTHROPIC_BASE_URL is gone: so is that gateway's list
         Assert.Equal(["sonnet", "opus"], catalog.Merge(claude).Models);
         catalog.Refresh([claude], claudeGateway: "https://ai.example.com/anthropic");

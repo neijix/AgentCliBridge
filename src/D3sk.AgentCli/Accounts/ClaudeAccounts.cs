@@ -9,7 +9,7 @@ public sealed record AgentAccount(string Id, string Name, IReadOnlyList<string> 
 /// <summary>
 /// The accounts of one node, read from its state folder: <c>agent-accounts.json</c> and
 /// <c>accounts/&lt;id&gt;/.claude</c> (and the other CLIs' sub-folders). Same layout and same
-/// cleaning as the Python app, because AI_token_status and the user's existing folders read it.
+/// cleaning as the Python app, because other tools and the user's existing folders read it.
 /// No account for a folder means the default account: the computer's own <c>~/.claude</c>.
 /// </summary>
 public sealed partial class ClaudeAccounts
