@@ -12,6 +12,7 @@ class Catalog:
         self.fail = fail
         self.refreshed = []
         self.gateways = []
+        self.gateway_headers = []
         self.forgotten = []
 
     def merge(self, agent):
@@ -20,11 +21,12 @@ class Catalog:
             "new_models": ["extra"] if agent["command"] == "grok" else [],
         }
 
-    def refresh(self, agents, force=False, claude_gateway=None):
+    def refresh(self, agents, force=False, claude_gateway=None, claude_gateway_headers=None):
         if self.fail:
             raise RuntimeError("the CLI printed nothing useful")
         self.refreshed.append(([a["command"] for a in agents], force))
         self.gateways.append(claude_gateway)
+        self.gateway_headers.append(claude_gateway_headers)
 
     def forget(self, command):
         self.forgotten.append(command)
@@ -154,6 +156,12 @@ def test_models_are_refreshed_with_the_gateway_claude_code_talks_to(tmp_path):
     ).refresh_models()
     host(tmp_path, AGENTS, catalog=catalog).refresh_models()  # Bedrock: no gateway to read
     assert catalog.gateways == ["http://127.0.0.1:4000", None]
+    assert catalog.gateway_headers == [{}, {}]
+    gateway_env["ANTHROPIC_AUTH_TOKEN"] = "t"
+    AgentHost(
+        agents_provider=lambda: AGENTS, home=tmp_path, env=gateway_env, model_catalog=catalog, cli_status=Status()
+    ).refresh_models()
+    assert catalog.gateway_headers[-1] == {"Authorization": "Bearer t"}
 
 
 def test_update_and_sign_in_refuse_an_unknown_cli_and_the_grok_binary_named_agent(tmp_path):

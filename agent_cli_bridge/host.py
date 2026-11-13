@@ -20,7 +20,7 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from .claude_account import claude_account, claude_gateway
+from .claude_account import claude_account, claude_gateway, claude_gateway_headers
 from .cli_login import CliLogins
 from .cli_status import (
     CliStatus,
@@ -170,6 +170,7 @@ class AgentHost:
                     [a for a in self._agents_provider() if is_available(a)],
                     force=force,
                     claude_gateway=claude_gateway(*self._claude_setup()),
+                    claude_gateway_headers=claude_gateway_headers(*self._claude_setup()),
                 )
             except Exception:  # a bad CLI answer must never take the host down
                 log.exception("Listing the agents' models failed")

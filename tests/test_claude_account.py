@@ -1,6 +1,12 @@
 import json
 
-from agent_cli_bridge.claude_account import claude_account, claude_gateway, claude_profile_dir, claude_profile_env
+from agent_cli_bridge.claude_account import (
+    claude_account,
+    claude_gateway,
+    claude_gateway_headers,
+    claude_profile_dir,
+    claude_profile_env,
+)
 
 
 def _home(tmp_path, *, settings_env=None, organization=None):
@@ -64,6 +70,33 @@ def test_anthropic_a_cloud_provider_or_a_url_that_is_not_http_has_no_gateway(tmp
     assert claude_gateway(tmp_path, bedrock) is None
     assert claude_gateway(tmp_path, {"ANTHROPIC_BASE_URL": "file:///etc/hosts"}) is None
     assert claude_gateway(tmp_path, {"ANTHROPIC_BASE_URL": "ftp://files.example.com"}) is None
+
+
+def test_the_gateway_gets_the_credentials_claude_code_sends_it(tmp_path):
+    env = {
+        "ANTHROPIC_BASE_URL": "https://adb-1.azuredatabricks.net/ai-gateway/anthropic",
+        "ANTHROPIC_AUTH_TOKEN": " dapi-token ",
+        "ANTHROPIC_API_KEY": "sk-key",
+        "ANTHROPIC_CUSTOM_HEADERS": "x-databricks-use-coding-agent-mode: true\nbad header: x\nno-colon\nx-empty:\n",
+    }
+    assert claude_gateway_headers(tmp_path, env) == {
+        "x-databricks-use-coding-agent-mode": "true",
+        "x-api-key": "sk-key",
+        "Authorization": "Bearer dapi-token",
+    }
+    # The settings' env wins, as it does for Claude Code itself.
+    home = _home(tmp_path, settings_env={"ANTHROPIC_AUTH_TOKEN": "from-settings"})
+    assert claude_gateway_headers(home, env)["Authorization"] == "Bearer from-settings"
+
+
+def test_no_gateway_means_no_credentials_are_handed_out(tmp_path):
+    token = {"ANTHROPIC_AUTH_TOKEN": "secret", "ANTHROPIC_API_KEY": "sk-key"}
+    assert claude_gateway_headers(tmp_path, token) == {}
+    assert claude_gateway_headers(tmp_path, {**token, "ANTHROPIC_BASE_URL": "https://api.anthropic.com"}) == {}
+    bedrock = {**token, "ANTHROPIC_BASE_URL": "https://ai.example.com", "CLAUDE_CODE_USE_BEDROCK": "1"}
+    assert claude_gateway_headers(tmp_path, bedrock) == {}
+    broken = {"ANTHROPIC_BASE_URL": "https://ai.example.com", "ANTHROPIC_AUTH_TOKEN": "a\r\nX-Injected: 1"}
+    assert claude_gateway_headers(tmp_path, broken) == {}
 
 
 def test_a_port_that_is_not_a_number_is_no_gateway_and_no_crash(tmp_path):
