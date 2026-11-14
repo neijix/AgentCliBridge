@@ -3,6 +3,30 @@
 The C# line on `main`, tagged `dotnet-v<semver>`. The Python line lives on the `python` branch
 with its own `v*` tags; this file does not cover it.
 
+## [dotnet-v0.4.0] — 2026-11-14
+
+### Added
+- `ClaudeGateway.Url(home, env)` and `ClaudeGateway.Headers(home, env)`: the company gateway a Claude
+  home talks to and the headers Claude Code sends it (`GatewayHeaders`, an ordered, case-insensitive
+  map; the token or API key replaces a custom header of the same name).
+- `ClaudeAccountKind.Of(home, env)`: which account a Claude home runs on — `personal` or `work`
+  (gateway, cloud provider, Team/Enterprise) — with a short detail.
+- `CatalogIo.FetchJson(url, headers)` and a `ModelCatalog` constructor whose fetch takes the headers.
+
+### Changed
+- `ModelCatalog.Refresh` takes an optional `claudeGatewayHeaders`. They are sent only over https;
+  a plain-http gateway, loopback included, is read without credentials as before. Source-compatible;
+  a consumer built against 0.3.0 must recompile.
+
+## [dotnet-v0.3.0] — 2026-11-13
+
+### Changed
+- The local model client names D3SKMODEL: keychain entry `d3sk/d3skmodel` (account `d3skmodel`),
+  socket `~/.d3skmodel/api.sock`, and messages that say `d3skmodel setup`.
+- Antigravity: the auto and don't-ask modes run `--mode auto` (accept-edits still asked before a
+  terminal command, which print mode soft-denied).
+- The publish workflow also targets nuget.org, by Trusted Publishing (no stored key).
+
 ## [dotnet-v0.2.0] — 2026-11-07
 
 ### Added
