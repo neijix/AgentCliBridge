@@ -63,7 +63,13 @@ public static class CatalogIo
     /// <see cref="GatewayMaxBytes"/>. Only http(s) without user info is read. A non-2xx answer is an
     /// <see cref="HttpRequestException"/> with its status; one that never answered has none.
     /// </summary>
-    public static JsonNode? FetchJson(string url)
+    public static JsonNode? FetchJson(string url) => FetchJson(url, null);
+
+    /// <summary>
+    /// As <see cref="FetchJson(string)"/>, sending <paramref name="headers"/> too, but only to an https URL:
+    /// plain http, loopback included, gets none (a local port may be held by any process).
+    /// </summary>
+    public static JsonNode? FetchJson(string url, IReadOnlyDictionary<string, string>? headers)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
             || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
@@ -73,9 +79,7 @@ public static class CatalogIo
         }
         using var handler = new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false, UseProxy = !uri.IsLoopback };
         using var client = new HttpClient(handler) { Timeout = GatewayTimeout };
-        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-        request.Headers.Accept.ParseAdd("application/json");
-        request.Headers.UserAgent.ParseAdd("D3sk.AgentCli");
+        using var request = BuildGatewayRequest(uri, headers);
         using var response = client.Send(request, HttpCompletionOption.ResponseHeadersRead);
         if (!response.IsSuccessStatusCode)
         {
@@ -101,5 +105,34 @@ public static class CatalogIo
         {
             throw new FormatException("the answer is not JSON", ex);
         }
+    }
+
+    /// <summary>
+    /// The GET <see cref="FetchJson(string, IReadOnlyDictionary{string, string})"/> sends: <paramref name="headers"/>
+    /// only when <paramref name="uri"/> is https, its own <c>Accept</c> and <c>User-Agent</c> winning over given ones.
+    /// A header the HTTP stack refuses throws <see cref="ArgumentException"/>.
+    /// </summary>
+    internal static HttpRequestMessage BuildGatewayRequest(Uri uri, IReadOnlyDictionary<string, string>? headers)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        if (uri.Scheme == Uri.UriSchemeHttps && headers is not null)
+        {
+            foreach (var (name, value) in headers)
+            {
+                if (string.Equals(name, "Accept", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(name, "User-Agent", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                if (!request.Headers.TryAddWithoutValidation(name, value))
+                {
+                    request.Dispose();
+                    throw new ArgumentException("the HTTP stack refuses a gateway header");
+                }
+            }
+        }
+        request.Headers.Accept.ParseAdd("application/json");
+        request.Headers.UserAgent.ParseAdd("D3sk.AgentCli");
+        return request;
     }
 }

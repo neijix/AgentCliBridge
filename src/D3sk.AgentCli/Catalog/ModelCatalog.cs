@@ -68,18 +68,19 @@ public sealed class ModelCatalog
 
     private readonly string _knownPath;
     private readonly Func<IReadOnlyList<string>, string> _run;
-    private readonly Func<string, JsonNode?> _fetch;
+    private readonly Func<string, IReadOnlyDictionary<string, string>, JsonNode?> _fetch;
     private readonly Func<double> _clock;
     private readonly Dictionary<string, (List<string>? Ids, double ExpiresAt)> _listed = [];
     private readonly Dictionary<string, Dictionary<string, double[]>> _prices = [];
     private readonly Dictionary<string, IReadOnlyDictionary<string, string>> _labels = [];
     private readonly Dictionary<string, HashSet<string>> _toolless = [];
     private readonly Dictionary<string, string> _gateways = [];
+    private static readonly IReadOnlyDictionary<string, string> NoHeaders = new Dictionary<string, string>();
     private Dictionary<string, List<string>>? _known;
 
     /// <param name="knownPath">Where the first read of each catalog is kept (<c>models-known.json</c>).</param>
     /// <param name="run">Runs a CLI's listing; defaults to a real process.</param>
-    /// <param name="fetch">Reads a gateway's JSON; defaults to <see cref="CatalogIo.FetchJson"/>.</param>
+    /// <param name="fetch">Reads a gateway's JSON; defaults to <see cref="CatalogIo.FetchJson(string)"/>.</param>
     /// <param name="clock">Seconds, for the cache.</param>
     public ModelCatalog(
         string knownPath,
@@ -89,7 +90,27 @@ public sealed class ModelCatalog
     {
         _knownPath = knownPath;
         _run = run ?? CatalogIo.RunList;
-        _fetch = fetch ?? CatalogIo.FetchJson;
+        _fetch = fetch is null ? (url, headers) => CatalogIo.FetchJson(url, headers) : (url, _) => fetch(url);
+        _clock = clock ?? (() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0);
+    }
+
+    /// <summary>
+    /// As the first constructor, with a fetch that also takes the headers of the gateway it reads
+    /// (empty when none, and always empty for a gateway that is not https).
+    /// </summary>
+    /// <param name="knownPath">Where the first read of each catalog is kept (<c>models-known.json</c>).</param>
+    /// <param name="fetch">Reads a gateway's JSON given its URL and headers.</param>
+    /// <param name="run">Runs a CLI's listing; defaults to a real process.</param>
+    /// <param name="clock">Seconds, for the cache.</param>
+    public ModelCatalog(
+        string knownPath,
+        Func<string, IReadOnlyDictionary<string, string>, JsonNode?> fetch,
+        Func<IReadOnlyList<string>, string>? run = null,
+        Func<double>? clock = null)
+    {
+        _knownPath = knownPath;
+        _run = run ?? CatalogIo.RunList;
+        _fetch = fetch;
         _clock = clock ?? (() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0);
     }
 
@@ -107,13 +128,17 @@ public sealed class ModelCatalog
     /// Asks every CLI that can list its models and whose cached answer expired (blocking).
     /// <paramref name="claudeGateway"/> is the company gateway Claude Code talks to; its list stands for Claude Code's.
     /// </summary>
-    public void Refresh(IEnumerable<CatalogAgent> agents, bool force = false, string? claudeGateway = null)
+    public void Refresh(
+        IEnumerable<CatalogAgent> agents,
+        bool force = false,
+        string? claudeGateway = null,
+        IReadOnlyDictionary<string, string>? claudeGatewayHeaders = null)
     {
         foreach (var agent in agents)
         {
             if (agent.Flavor == "claude" && agent.Command.Length > 0 && agent.BinaryFound)
             {
-                RefreshGateway(agent.Command, claudeGateway, force);
+                RefreshGateway(agent.Command, claudeGateway, claudeGatewayHeaders, force);
                 continue;
             }
             if (agent.Command.Length == 0 || !ListArgs.TryGetValue(agent.Flavor, out var args) || !agent.BinaryFound)
@@ -154,7 +179,7 @@ public sealed class ModelCatalog
         }
     }
 
-    private void RefreshGateway(string command, string? baseUrl, bool force)
+    private void RefreshGateway(string command, string? baseUrl, IReadOnlyDictionary<string, string>? headers, bool force)
     {
         if (_gateways.GetValueOrDefault(command) != baseUrl)
         {
@@ -173,7 +198,8 @@ public sealed class ModelCatalog
         GatewayModels found;
         try
         {
-            found = GatewayModels.Parse(_fetch(GatewayModels.UrlFor(baseUrl)));
+            var carried = headers is not null && Uri.TryCreate(baseUrl, UriKind.Absolute, out var gateway) && gateway.Scheme == Uri.UriSchemeHttps;
+            found = GatewayModels.Parse(_fetch(GatewayModels.UrlFor(baseUrl), carried ? headers! : NoHeaders));
             if (found.Ids.Count == 0)
             {
                 throw new InvalidOperationException("no model ids in the answer");

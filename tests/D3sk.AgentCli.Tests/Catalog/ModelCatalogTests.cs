@@ -354,18 +354,25 @@ public sealed class ModelCatalogTests : IDisposable
                 try { ctx = server.GetContext(); } catch (Exception) { return; }
                 var h = ctx.Request.Headers;
                 seen.Add((ctx.Request.Url!.PathAndQuery, h["Authorization"] is not null || h["x-api-key"] is not null || h["Cookie"] is not null));
-                if (ctx.Request.Url.AbsolutePath.StartsWith("/moved"))
+                try
                 {
-                    ctx.Response.StatusCode = 302;
-                    ctx.Response.RedirectLocation = "/v1/models";
+                    if (ctx.Request.Url.AbsolutePath.StartsWith("/moved"))
+                    {
+                        ctx.Response.StatusCode = 302;
+                        ctx.Response.RedirectLocation = "/v1/models";
+                    }
+                    else
+                    {
+                        ctx.Response.ContentType = "application/json";
+                        var body = huge ? new byte[CatalogIo.GatewayMaxBytes + 1] : System.Text.Encoding.UTF8.GetBytes(GatewayAnswer().ToJsonString());
+                        ctx.Response.OutputStream.Write(body);
+                    }
+                    ctx.Response.Close();
                 }
-                else
+                catch (Exception ex) when (ex is HttpListenerException or IOException or ObjectDisposedException or InvalidOperationException)
                 {
-                    ctx.Response.ContentType = "application/json";
-                    var body = huge ? new byte[CatalogIo.GatewayMaxBytes + 1] : System.Text.Encoding.UTF8.GetBytes(GatewayAnswer().ToJsonString());
-                    ctx.Response.OutputStream.Write(body);
+                    ctx.Response.Abort(); // the client gave up at the size limit
                 }
-                ctx.Response.Close();
             }
         }, TestContext.Current.CancellationToken);
         var baseUrl = $"http://127.0.0.1:{number}";
