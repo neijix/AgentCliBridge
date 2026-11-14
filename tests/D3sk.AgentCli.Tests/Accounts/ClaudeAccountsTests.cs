@@ -30,6 +30,10 @@ public sealed class ClaudeAccountsTests : IDisposable
     private static JsonNode Dict(IEnumerable<KeyValuePair<string, string>> pairs) =>
         new JsonObject(pairs.Select(p => KeyValuePair.Create(p.Key, (JsonNode?)JsonValue.Create(p.Value))));
 
+    /// <summary>The golden writes paths with '/'; on Windows <c>CLAUDE_CONFIG_DIR</c> joins with '\'.</summary>
+    private static JsonNode SlashedEnv(IEnumerable<KeyValuePair<string, string>> env) =>
+        Dict(env.Select(p => KeyValuePair.Create(p.Key, p.Key == "CLAUDE_CONFIG_DIR" ? p.Value.Replace('\\', '/') : p.Value)));
+
     private static JsonArray Strings(IEnumerable<string> items) => new(items.Select(s => (JsonNode?)JsonValue.Create(s)).ToArray());
 
     /// <summary>The state folder as the Python app leaves it after its steps: file written, homes created.</summary>
@@ -75,14 +79,14 @@ public sealed class ClaudeAccountsTests : IDisposable
         };
         Assert.True(JsonNode.DeepEquals(golden["agent_accounts_json"], file), file.ToJsonString());
 
-        var env = Dict(accounts.TurnEnv("claude", work));
+        var env = SlashedEnv(accounts.TurnEnv("claude", work));
         Assert.True(JsonNode.DeepEquals(golden["claude_env"], env), env.ToJsonString());
         Assert.Empty(accounts.TurnEnv("cursor-agent", work));
         Assert.Equal("{}", golden["cursor_env_default"]!.ToJsonString());
 
         var signIn = accounts.SignIn("work", "claude");
         Assert.Equal(golden["sign_in_claude"]![0]!.ToJsonString(), Strings(signIn.Args).ToJsonString());
-        Assert.True(JsonNode.DeepEquals(golden["sign_in_claude"]![1], Dict(signIn.Env)));
+        Assert.True(JsonNode.DeepEquals(golden["sign_in_claude"]![1], SlashedEnv(signIn.Env)));
     }
 
     [Fact]
