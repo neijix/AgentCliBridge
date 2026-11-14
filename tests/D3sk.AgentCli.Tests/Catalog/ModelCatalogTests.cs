@@ -385,6 +385,6 @@ public sealed class ModelCatalogTests : IDisposable
         huge = true;
         Assert.Contains("over", Assert.Throws<ArgumentException>(() => CatalogIo.FetchJson($"{baseUrl}/v1/models")).Message);
         server.Stop();
-        await loop;
+        await loop.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken); // a write stuck on a gone client fails, never hangs
     }
 }
