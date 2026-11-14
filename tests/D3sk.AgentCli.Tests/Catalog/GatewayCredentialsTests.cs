@@ -58,6 +58,21 @@ public sealed class GatewayCredentialsTests : IDisposable
     }
 
     [Fact]
+    public void A_gateway_that_never_answers_is_given_up_on_at_the_gateway_timeout()
+    {
+        _server.NoAnswer = true;
+        Assert.True(CatalogIo.GatewayTimeout <= TimeSpan.FromSeconds(10), "a gateway read must stay short");
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var ex = Record.Exception(() => CatalogIo.FetchJson($"{_server.BaseUrl}/v1/models", Credentials));
+        watch.Stop();
+        // HttpClient.Timeout surfaces as a TaskCanceledException (an OperationCanceledException).
+        Assert.IsAssignableFrom<OperationCanceledException>(ex);
+        Assert.True(watch.Elapsed >= CatalogIo.GatewayTimeout * 0.8, $"gave up too early: {watch.Elapsed}");
+        Assert.True(watch.Elapsed < CatalogIo.GatewayTimeout + TimeSpan.FromSeconds(3), $"gave up too late: {watch.Elapsed}");
+        Assert.Single(_server.Seen);
+    }
+
+    [Fact]
     public void An_https_request_carries_the_headers_and_its_own_accept_and_user_agent_win()
     {
         var given = new Dictionary<string, string>(Credentials) { ["accept"] = "text/html", ["User-Agent"] = "spoof" };

@@ -371,7 +371,7 @@ public sealed class ModelCatalogTests : IDisposable
                 }
                 catch (Exception ex) when (ex is HttpListenerException or IOException or ObjectDisposedException or InvalidOperationException)
                 {
-                    ctx.Response.Abort(); // the client gave up at the size limit
+                    try { ctx.Response.Abort(); } catch (ObjectDisposedException) { } // the client gave up at the size limit
                 }
             }
         }, TestContext.Current.CancellationToken);

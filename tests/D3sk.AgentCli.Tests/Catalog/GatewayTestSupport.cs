@@ -21,6 +21,7 @@ public sealed class LoopbackGateway : IDisposable
 
     private readonly HttpListener _listener = new();
     private readonly List<SeenRequest> _seen = [];
+    private readonly List<HttpListenerContext> _held = [];
     private readonly Task _loop;
 
     /// <summary>Starts on a free loopback port.</summary>
@@ -44,6 +45,9 @@ public sealed class LoopbackGateway : IDisposable
 
     /// <summary>The body to answer.</summary>
     public byte[] Body { get; set; } = Encoding.UTF8.GetBytes(ModelsAnswer);
+
+    /// <summary>When set, a request is accepted and recorded but never answered (until the server stops).</summary>
+    public bool NoAnswer { get; set; }
 
     /// <summary>Where a 3xx points.</summary>
     public string? RedirectTo { get; set; }
@@ -79,6 +83,15 @@ public sealed class LoopbackGateway : IDisposable
             {
                 _seen.Add(new SeenRequest(ctx.Request.Url!.PathAndQuery, headers));
             }
+            if (NoAnswer)
+            {
+                // Held open with no response: Dispose aborts it once the listener stops.
+                lock (_held)
+                {
+                    _held.Add(ctx);
+                }
+                continue;
+            }
             try
             {
                 ctx.Response.StatusCode = Status;
@@ -93,7 +106,14 @@ public sealed class LoopbackGateway : IDisposable
             catch (Exception ex) when (ex is HttpListenerException or IOException or ObjectDisposedException or InvalidOperationException)
             {
                 // The client gave up mid-answer (the size-limit case): expected.
-                ctx.Response.Abort();
+                try
+                {
+                    ctx.Response.Abort();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // the listener stopped under us
+                }
             }
         }
     }
@@ -108,6 +128,20 @@ public sealed class LoopbackGateway : IDisposable
         catch (ObjectDisposedException)
         {
             // already stopped
+        }
+        lock (_held)
+        {
+            foreach (var ctx in _held)
+            {
+                try
+                {
+                    ctx.Response.Abort();
+                }
+                catch (Exception ex) when (ex is ObjectDisposedException or HttpListenerException or InvalidOperationException)
+                {
+                    // already gone
+                }
+            }
         }
         try
         {

@@ -64,6 +64,17 @@ public sealed class ClaudeGatewayTests : IDisposable
         Assert.Equal(on ? null : "https://ai.example.com", url);
     }
 
+    [Theory]
+    [InlineData("ANTHROPIC_API_KEY", "x-api-key", 8232)]
+    [InlineData("ANTHROPIC_API_KEY", "x-api-key", 8233)]
+    [InlineData("ANTHROPIC_AUTH_TOKEN", "Authorization", 8232)]
+    [InlineData("ANTHROPIC_AUTH_TOKEN", "Authorization", 8233)]
+    public void A_key_or_token_holding_a_unicode_line_or_paragraph_separator_gives_no_header(string name, string header, int separator)
+    {
+        var env = Env(("ANTHROPIC_BASE_URL", "https://ai.example.com"), (name, $"sk-a{(char)separator}b"));
+        Assert.DoesNotContain(ClaudeGateway.Headers(_tmp, env), p => p.Key == header);
+    }
+
     [Fact]
     public void The_gateway_gets_the_credentials_claude_code_sends_it()
     {
