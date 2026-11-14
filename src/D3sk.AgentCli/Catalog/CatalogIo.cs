@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -110,7 +111,7 @@ public static class CatalogIo
     /// <summary>
     /// The GET <see cref="FetchJson(string, IReadOnlyDictionary{string, string})"/> sends: <paramref name="headers"/>
     /// only when <paramref name="uri"/> is https, its own <c>Accept</c> and <c>User-Agent</c> winning over given ones.
-    /// A header the HTTP stack refuses throws <see cref="ArgumentException"/>.
+    /// A header the HTTP stack refuses, a value that is not ASCII included, throws <see cref="ArgumentException"/>.
     /// </summary>
     internal static HttpRequestMessage BuildGatewayRequest(Uri uri, IReadOnlyDictionary<string, string>? headers)
     {
@@ -124,7 +125,7 @@ public static class CatalogIo
                 {
                     continue;
                 }
-                if (!request.Headers.TryAddWithoutValidation(name, value))
+                if (!Ascii.IsValid(value) || !request.Headers.TryAddWithoutValidation(name, value))
                 {
                     request.Dispose();
                     throw new ArgumentException("the HTTP stack refuses a gateway header");

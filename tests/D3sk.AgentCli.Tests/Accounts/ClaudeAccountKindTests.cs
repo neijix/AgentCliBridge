@@ -145,4 +145,14 @@ public sealed class ClaudeAccountKindTests : IDisposable
         SignIn(profile, "claude_pro", "u2");
         Is("personal", "Pro", ClaudeAccountKind.Of(home, env));
     }
+
+    [Fact]
+    public void A_leading_tilde_in_claude_config_dir_is_the_home()
+    {
+        var home = Home(organization: "claude_max");
+        var profile = Path.Combine(home, "profile");
+        Directory.CreateDirectory(profile);
+        SignIn(profile, "claude_team", "u3");
+        Is("work", "Team", ClaudeAccountKind.Of(home, Env(("CLAUDE_CONFIG_DIR", "~/profile"))));
+    }
 }

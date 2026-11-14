@@ -114,6 +114,20 @@ public sealed class ClaudeGatewayTests : IDisposable
     }
 
     [Theory]
+    [InlineData("~/profile")]
+    [InlineData("~\\profile")]
+    public void A_leading_tilde_in_claude_config_dir_is_the_home_as_python_expanduser(string configured)
+    {
+        var home = Home(Env(("ANTHROPIC_BASE_URL", "https://other.example.com")));
+        Directory.CreateDirectory(Path.Combine(home, "profile"));
+        File.WriteAllText(Path.Combine(home, "profile", "settings.json"), """{"env":{"ANTHROPIC_BASE_URL":"https://gw.example.com"}}""");
+        Assert.Equal("https://gw.example.com", ClaudeGateway.Url(home, Env(("CLAUDE_CONFIG_DIR", configured))));
+        Assert.Equal(Path.Combine(home, ".claude"), ClaudeGateway.ConfigDir(home, Env(("CLAUDE_CONFIG_DIR", "~/.claude"))));
+        Assert.Equal(home, ClaudeGateway.ConfigDir(home, Env(("CLAUDE_CONFIG_DIR", " ~ "))));
+        Assert.Null(ClaudeGateway.ConfigDir(home, Env()));
+    }
+
+    [Theory]
     [InlineData("not json")]
     [InlineData("[1,2]")]
     [InlineData("""{"env":"x"}""")]

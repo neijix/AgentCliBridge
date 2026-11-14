@@ -18,6 +18,13 @@ with its own `v*` tags; this file does not cover it.
   a plain-http gateway, loopback included, is read without credentials as before. Source-compatible;
   a consumer built against 0.3.0 must recompile.
 
+### Fixed
+- A Claude gateway that never answers no longer throws out of `ModelCatalog.Refresh`: it counts as
+  unreachable and is asked again a minute later.
+- A gateway header value that is not ASCII is refused before the request (a catalog failure, retried
+  later) instead of failing as an unreachable network.
+- A leading `~` in `CLAUDE_CONFIG_DIR` is the given home, as Python `expanduser` reads it.
+
 ## [dotnet-v0.3.0] — 2026-11-13
 
 ### Changed

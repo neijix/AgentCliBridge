@@ -139,8 +139,7 @@ public static partial class ClaudeGateway
     internal static Dictionary<string, string> MergedEnv(string home, IReadOnlyDictionary<string, string> env)
     {
         var merged = new Dictionary<string, string>(env, StringComparer.Ordinal);
-        var configured = (env.GetValueOrDefault("CLAUDE_CONFIG_DIR") ?? "").Trim();
-        var dir = configured.Length > 0 ? configured : Path.Combine(home, ".claude");
+        var dir = ConfigDir(home, env) ?? Path.Combine(home, ".claude");
         if (ReadJson(Path.Combine(dir, "settings.json")) is JsonObject root && root["env"] is JsonObject found)
         {
             foreach (var (key, value) in found)
@@ -152,6 +151,24 @@ public static partial class ClaudeGateway
             }
         }
         return merged;
+    }
+
+    /// <summary>
+    /// <c>CLAUDE_CONFIG_DIR</c> when set, a leading <c>~</c> read as <paramref name="home"/> (Python
+    /// <c>expanduser</c>); else <c>null</c>.
+    /// </summary>
+    internal static string? ConfigDir(string home, IReadOnlyDictionary<string, string> env)
+    {
+        var configured = (env.GetValueOrDefault("CLAUDE_CONFIG_DIR") ?? "").Trim();
+        if (configured == "~")
+        {
+            return home;
+        }
+        if (configured.StartsWith("~/", StringComparison.Ordinal) || configured.StartsWith("~\\", StringComparison.Ordinal))
+        {
+            return Path.Combine(home, configured[2..]);
+        }
+        return configured.Length > 0 ? configured : null;
     }
 
     /// <summary>The first cloud switch that is on (Bedrock, Vertex, Foundry), or <c>null</c>.</summary>

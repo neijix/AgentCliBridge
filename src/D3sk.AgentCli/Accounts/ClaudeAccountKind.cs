@@ -52,8 +52,7 @@ public static partial class ClaudeAccountKind
         {
             return new("work", host);
         }
-        var configured = (env.GetValueOrDefault("CLAUDE_CONFIG_DIR") ?? "").Trim();
-        var dir = configured.Length > 0 ? configured : home;
+        var dir = ClaudeGateway.ConfigDir(home, env) ?? home;
         if (ClaudeGateway.ReadJson(Path.Combine(dir, ".claude.json")) is not JsonObject root
             || root["oauthAccount"] is not JsonObject account
             || Text(account["accountUuid"]).Length == 0)

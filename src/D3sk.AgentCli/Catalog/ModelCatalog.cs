@@ -205,10 +205,10 @@ public sealed class ModelCatalog
                 throw new InvalidOperationException("no model ids in the answer");
             }
         }
-        catch (Exception ex) when (CatalogErrors.IsListFailure(ex) || ex is HttpRequestException)
+        catch (Exception ex) when (CatalogErrors.IsListFailure(ex) || ex is HttpRequestException or OperationCanceledException)
         {
             // Not up yet (it may start after the host at login): ask again soon. It said no: later.
-            var unreachable = ex is IOException || (ex is HttpRequestException { StatusCode: null });
+            var unreachable = ex is IOException or OperationCanceledException || (ex is HttpRequestException { StatusCode: null });
             _listed[command] = (cached.Ids, _clock() + (unreachable ? GatewayRetry : FailureTtl));
             return;
         }

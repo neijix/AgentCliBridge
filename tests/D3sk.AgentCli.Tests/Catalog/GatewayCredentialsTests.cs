@@ -103,6 +103,30 @@ public sealed class GatewayCredentialsTests : IDisposable
         Assert.Equal(["claude-opus-5-5"], catalog.Merge(Claude()).Models);
     }
 
+    [Fact]
+    public void A_value_that_is_not_ascii_is_refused_before_sending_not_blamed_on_the_network()
+    {
+        var accented = new Dictionary<string, string> { ["X-Team"] = "caf" + (char)0xE9 };
+        Assert.Throws<ArgumentException>(() => CatalogIo.BuildGatewayRequest(new Uri("https://ai.example.com"), accented).Dispose());
+    }
+
+    [Fact]
+    public void A_gateway_that_never_answers_is_asked_again_a_minute_later_and_refresh_returns()
+    {
+        var calls = 0;
+        var now = 1000.0;
+        var catalog = new ModelCatalog(Path.Combine(_dir, "known.json"), (url, h) =>
+        {
+            calls++;
+            throw new TaskCanceledException("timed out");
+        }, clock: () => now);
+        catalog.Refresh([Claude()], claudeGateway: "https://ai.example.com", claudeGatewayHeaders: Credentials);
+        Assert.Equal(["claude-opus-5-5"], catalog.Merge(Claude()).Models);
+        now += ModelCatalog.GatewayRetry + 1;
+        catalog.Refresh([Claude()], claudeGateway: "https://ai.example.com", claudeGatewayHeaders: Credentials);
+        Assert.Equal(2, calls);
+    }
+
     [Theory]
     [InlineData("https://ai.example.com", true)]
     [InlineData("http://127.0.0.1:4000", false)]
