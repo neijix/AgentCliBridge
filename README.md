@@ -3,7 +3,7 @@
 > **Python frozen at `v0.3.0`: fixes only.** Python gateway fixes stay on the `python` branch
 > (`v0.3.x` tags) for the apps that pin that tag. `main` is now C#: the `D3sk.AgentCli.Usage`
 > library and the AgentCli Usage app, plus the C# CLI runner `D3sk.AgentCli`, moved there from
-> AgentCliBridge.Net (archived).
+> AgentCliBridge.Net (deleted).
 
 Use the AI coding CLIs you already pay for — Claude Code, Cursor Agent, Gemini CLI, Antigravity,
 Grok, Copilot and OpenCode — from your own apps, as if they were APIs. The Python gateway and its
