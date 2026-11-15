@@ -73,6 +73,8 @@ public class EffortTests
     [Theory]
     [InlineData("", "low,medium,high,xhigh,max")]
     [InlineData("opus", "low,medium,high,xhigh,max")]
+    [InlineData("fable", "low,medium,high,xhigh,max")]
+    [InlineData("claude-fable-5-2", "low,medium,high,xhigh,max")]
     [InlineData("claude-opus-5-5[1m]", "low,medium,high,xhigh,max")]
     [InlineData("claude-opus-4-7", "low,medium,high,xhigh,max")]
     [InlineData("claude-opus-4-6", "low,medium,high,max")]

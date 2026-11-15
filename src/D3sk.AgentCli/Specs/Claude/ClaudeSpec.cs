@@ -20,7 +20,9 @@ public static class ClaudeSpec
 
     /// <summary>
     /// Curated model ids passed verbatim to <c>--model</c>; the first is the default. The short aliases
-    /// always resolve to the latest release; <c>claude-opus-5-5</c> pins Opus 5.5 by its full id.
+    /// always resolve to the latest release; <c>claude-fable-5-2</c> and <c>claude-opus-5-5</c> pin those
+    /// families by full id (Claude Code has no listing command).
     /// </summary>
-    public static IReadOnlyList<string> Models { get; } = ["sonnet", "fable", "opus", "claude-opus-5-5", "haiku"];
+    public static IReadOnlyList<string> Models { get; } =
+        ["sonnet", "fable", "claude-fable-5-2", "opus", "claude-opus-5-5", "haiku"];
 }

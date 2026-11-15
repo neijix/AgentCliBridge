@@ -204,5 +204,7 @@ public class ClaudeArgvTests
     {
         Assert.Equal("sonnet", ClaudeSpec.Models[0]);
         Assert.Equal("claude", ClaudeSpec.Command);
+        Assert.Contains("fable", ClaudeSpec.Models);
+        Assert.Contains("claude-fable-5-2", ClaudeSpec.Models);
     }
 }

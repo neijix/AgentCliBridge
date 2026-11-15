@@ -34,6 +34,7 @@ public static class CursorSpec
         "grok-4.7-high",
         "cursor-grok-4.6-high",
         "claude-opus-5-5-high",
+        "claude-fable-5-2-high",
         "claude-fable-5-1-high",
         "claude-sonnet-5-5-high",
         "claude-opus-5-thinking-high",

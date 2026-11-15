@@ -3,6 +3,11 @@
 The C# line on `main`, tagged `dotnet-v<semver>`. The Python line lives on the `python` branch
 with its own `v*` tags; this file does not cover it.
 
+## [Unreleased]
+
+### Changed
+- Claude Code's curated list includes `claude-fable-5-2` (Fable 5.2); the `fable` alias maps to that family for ranking and effort. Cursor's shortlist includes `claude-fable-5-2-high`.
+
 ## [dotnet-v0.4.0] — 2026-11-14
 
 ### Added

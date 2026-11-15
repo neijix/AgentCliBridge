@@ -14,6 +14,13 @@ public sealed partial class ModelRanking
     {
         ["claude-opus-5-5"] = new() { ["max"] = new(58, null), ["xhigh"] = new(56, 89), ["high"] = new(54, 82), ["medium"] = new(51, 81), ["low"] = new(42, 80) },
         ["claude-sonnet-5-5"] = new() { ["max"] = new(56, 133), ["xhigh"] = new(52, 109), ["high"] = new(47, 106), ["medium"] = new(41, 106), ["low"] = new(36, 105) },
+        ["claude-fable-5-2"] = new() {
+            ["max"] = new(65, 102),
+            ["xhigh"] = new(62, 99),
+            ["high"] = new(62, 105),
+            ["medium"] = new(56, 97),
+            ["low"] = new(54, 106),
+        },
         ["claude-fable-5-1"] = new() {
             ["max"] = new(53, 69),
             ["xhigh"] = new(53, 66),
