@@ -5,6 +5,15 @@ with its own `v*` tags; this file does not cover it.
 
 ## [Unreleased]
 
+## [dotnet-v0.5.0] — 2026-11-15
+
+### Added
+- The package carries the 19 web page files (`chatbox.css`, `components.js`, `composer.js`, ... `stream.js`),
+  byte-identical to the Python line's `agent_cli_bridge/ui/` at rev `8ed5e7c`. A project referencing
+  the package finds them as files under `acb/` in its build and publish output
+  (`buildTransitive/D3sk.AgentCli.targets`; `<CopyAgentCliPageFiles>false</CopyAgentCliPageFiles>` opts out).
+- The UI tests (`tests/ui/*.test.cjs`, run against `src/D3sk.AgentCli/ui`) and a `node --test` step in `check.sh` / `check.ps1`.
+
 ### Changed
 - Claude Code's curated list includes `claude-fable-5-2` (Fable 5.2); the `fable` alias maps to that family for ranking and effort. Cursor's shortlist includes `claude-fable-5-2-high`.
 

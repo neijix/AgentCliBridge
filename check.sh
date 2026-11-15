@@ -1,5 +1,5 @@
 #!/bin/bash
-# The gate before a commit: restore, build with warnings as errors, every test (dotnet test).
+# The gate before a commit: restore, build with warnings as errors, every test (dotnet test, then node --test tests/ui).
 # Twin: check.ps1. This computer's SDK and cache folders come from config.local/dotnet.env when
 # that file exists (dotnet.env.example once the usage scaffold lands). --full = the same gate.
 set -euo pipefail
@@ -24,3 +24,5 @@ command -v dotnet >/dev/null 2>&1 || { echo "check: no .NET 10 SDK found (set DO
 
 echo "Running the gate."
 dotnet test D3sk.AgentCli.slnx -c Release
+command -v node >/dev/null 2>&1 || { echo "check: node is required for the UI tests" >&2; exit 1; }
+node --test tests/ui/*.test.cjs

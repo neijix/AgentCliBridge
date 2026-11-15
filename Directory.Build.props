@@ -10,6 +10,6 @@
     <!-- A Release build maps source paths to /_/: no builder home path in the DLL. -->
     <ContinuousIntegrationBuild Condition="'$(Configuration)' == 'Release'">true</ContinuousIntegrationBuild>
     <!-- Untagged builds; a dotnet-v<semver> tag overrides it in publish.yml. -->
-    <Version>0.4.0</Version>
+    <Version>0.5.0</Version>
   </PropertyGroup>
 </Project>

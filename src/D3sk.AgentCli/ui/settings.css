@@ -1,0 +1,347 @@
+/* The Settings page every host shares: a nav column on the left (its own scroll), one category
+   in a readable column on the right (its own scroll). Every category: a title + lede, then
+   groups. A group is a small-caps title (+ lede), one card, and a short note or a folded help
+   line under the card. A card stacks rows split by hairlines; a "settings-row" puts its label +
+   lede left and its control right, and stacks them when the column itself is narrow (a
+   container query, so it follows the column, not the window). The same row padding
+   (--settings-pad) runs through every card, static or rendered, so labels, lists and buttons
+   line up from one category to the next. Then Settings › Agents (a row per CLI: version,
+   update, sign-in — models.js cliSettings) and Settings › Models (a table per CLI, models.js
+   renderModelTables). Served as /acb/settings.css; where the page sits (over the window, in a
+   pane) is the host's — it may set --settings-nav-width. The page shell and the host's own
+   categories read the host's --bg, --panel, --panel-2, --border, --text, --strong, --muted,
+   --accent, --brand, --ok, --warning, --danger and --code-bg (--accent-soft, --accent-strong
+   optional); the Models and Agents categories, built by components.js mountModelsSettings and
+   mountAgentsSettings, wear palette.css's (.acb-ui) instead, the same in every app.
+
+   Narrow window: by default the nav becomes one scrolling row of tabs over the content, ✕ at
+   its end. A host that adds `drill-down` to .settings-page gets a list of categories instead,
+   one opening over it (the page toggles `is-index`; a `.settings-to-index` button goes back). */
+.settings-page {
+  display: grid; grid-template-columns: var(--settings-nav-width, 216px) minmax(0, 1fr); min-height: 0;
+  background: var(--bg);
+  --settings-pad: 14px 18px;
+}
+.settings-nav {
+  display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow-y: auto;
+  padding: 14px 12px 24px; background: var(--panel); border-right: 1px solid var(--border);
+}
+.settings-title { margin: 18px 10px 10px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.settings-page .settings-to-index { display: none; }  /* a host may style it as a button too */
+.settings-nav-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px;
+  border: 0; border-radius: 6px; background: none; color: var(--text); font: inherit; font-size: 14px; cursor: pointer;
+}
+.settings-nav-item:hover { background: var(--panel-2); color: var(--strong); }
+.settings-nav-item.selected { background: var(--accent-soft, var(--panel-2)); color: var(--strong); font-weight: 600; }
+.settings-nav-item.selected .settings-nav-icon { stroke: var(--accent); }
+.settings-nav-icon {
+  flex: none; width: 16px; height: 16px; fill: none; stroke: currentColor;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+.settings-main { position: relative; min-width: 0; min-height: 0; overflow-y: auto; padding: 0 48px 72px; }
+/* A host that closes Settings with ✕ (rather than a Back link in the nav) pins it top right. */
+.settings-close-bar { position: sticky; top: 0; z-index: 3; height: 0; display: flex; justify-content: flex-end; }
+.settings-close { margin: 14px -24px 0 0; width: 32px; height: 32px; padding: 0; font-size: 16px; }
+.settings-body { container-type: inline-size; max-width: 760px; margin: 0 auto; padding-top: 40px; min-width: 0; }
+.settings-category { display: flex; flex-direction: column; gap: 28px; }
+.settings-category[hidden] { display: none; }
+.settings-category-head { display: flex; flex-direction: column; gap: 6px; }
+.settings-main:has(> .settings-close-bar) .settings-category-head { padding-right: 40px; }
+.settings-category-groups { display: flex; flex-direction: column; gap: 28px; }
+.settings-category-groups[hidden] { display: none; }
+.settings-banner { margin: 0; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); font-size: 13px; line-height: 1.5; }
+.settings-banner.warning { border-color: color-mix(in srgb, var(--warning) 45%, var(--border)); color: var(--warning); }
+.settings-banner[hidden] { display: none; }
+.settings-category-title { margin: 0; font-size: 22px; font-weight: 600; color: var(--strong); }
+.settings-category-lede { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.settings-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.settings-group-title {
+  margin: 0 2px; font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+/* A group title with an action at its right (Agents: "Check again", Models: "Show all"). */
+.settings-group-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 26px; }
+.settings-group-head button { margin-right: -4px; }
+.settings-group-lede { margin: -2px 2px 2px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.settings-card {
+  display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--panel);
+  scroll-margin-top: 24px;
+}
+.settings-item { display: flex; flex-direction: column; gap: 12px; padding: var(--settings-pad, 14px 18px); min-width: 0; margin: 0; }
+.settings-item + .settings-item { border-top: 1px solid var(--border); }
+.settings-card-head { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.settings-row { flex-direction: row; align-items: center; justify-content: space-between; gap: 24px; }
+.settings-row > .settings-card-head { flex: 1 1 auto; }
+.settings-row > select { flex: none; width: 240px; }
+.settings-label { font-size: 14px; font-weight: 600; color: var(--strong); }
+.settings-lede { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.45; overflow-wrap: anywhere; }
+.settings-lede:empty { display: none; }
+.settings-status { margin: 0; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.settings-status:empty { display: none; }
+.settings-status.warning, .warning-text { color: var(--warning); }
+.settings-hint { margin: 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.settings-hint:empty { display: none; }
+.settings-hint.ok { color: var(--ok); }
+.settings-empty { margin: 0; padding: var(--settings-pad, 14px 18px); font-size: 13px; color: var(--muted); list-style: none; }
+/* A short line under a card, for what a folded help would say in one sentence. */
+.settings-note { margin: 0 2px; font-size: 12px; color: var(--muted); line-height: 1.5; max-width: 68ch; }
+.settings-note code { font-size: 11px; }
+.settings-help { margin: 0 2px; font-size: 12px; color: var(--muted); }
+.settings-help summary { cursor: pointer; width: fit-content; user-select: none; }
+.settings-help summary:hover { color: var(--text); }
+.settings-help[open] summary { color: var(--text); }
+.settings-help p { margin: 6px 0 0; line-height: 1.55; max-width: 68ch; }
+.settings-help p:empty { display: none; }
+/* A row of buttons under a field: a status note on its own line, the actions together at the right. */
+.settings-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.settings-actions:not(:has(> button:not([hidden]), > a:not([hidden]))) { display: none; }
+.settings-actions > p { flex: 1 1 100%; min-width: 0; }
+.settings-actions .spacer { flex: 1; }
+/* A form in a card: fields in a two-column grid (a "wide" one spans both), the submit under them. */
+.settings-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.settings-field-wide { grid-column: 1 / -1; }
+.settings-fields > input, .settings-fields > select { width: 100%; padding: 8px 10px; }
+/* A field always shows its label above it (never a placeholder alone); a muted <em> qualifies it. */
+.settings-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.settings-field > span, .settings-field > label { font-size: 12px; font-weight: 600; color: var(--text); }
+.settings-field em { margin-left: 4px; font-style: normal; font-weight: normal; color: var(--muted); }
+.settings-field > input, .settings-field > select { width: 100%; padding: 8px 10px; }
+.settings-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
+/* Two facts side by side in one row (what syncs / what stays), stacked when narrow. */
+.settings-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; }
+/* On / off: a switch rather than a bare checkbox. */
+.settings-switch {
+  appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 34px; height: 20px;
+  margin: 0; padding: 0; border: 0; border-radius: 10px; background: var(--field-border, var(--border));
+  cursor: pointer; transition: background 0.15s;
+}
+.settings-switch::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--text); transition: transform 0.15s;
+}
+.settings-switch:checked { background: var(--accent); }
+.settings-switch:checked::after { transform: translateX(14px); background: #fff; }
+.settings-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settings-switch:disabled { opacity: 0.5; cursor: default; }
+.settings-inline-switch { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; }
+/* Lists in a card (accounts, other machines): dot · name over a muted line · actions. */
+.settings-list { list-style: none; margin: 0; padding: 0; }
+.settings-list-row { display: flex; align-items: center; gap: 12px; padding: var(--settings-pad, 14px 18px); }
+.settings-list-row + .settings-list-row { border-top: 1px solid var(--border); }
+.settings-list-row .info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.settings-list-row .info strong { color: var(--strong); font-size: 14px; font-weight: 600; }
+.settings-list + .settings-item { border-top: 1px solid var(--border); }
+.row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+/* A narrow column (whatever the window): rows stack, forms go to one column, list actions wrap. */
+@container (max-width: 560px) {
+  .settings-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .settings-row > select { width: 100%; }
+  /* A switch stays at the end of its row: it is narrow enough for any column. */
+  .settings-row:has(> .settings-switch) { flex-direction: row; align-items: center; }
+  .settings-fields, .settings-split { grid-template-columns: minmax(0, 1fr); }
+  .settings-list-row { flex-wrap: wrap; }
+  .row-actions { flex-basis: 100%; justify-content: flex-start; }
+}
+/* Narrow window, default: the nav becomes one scrolling row of tabs over the content, ✕ at its end. */
+@media (max-width: 860px) {
+  .settings-page:not(.drill-down) { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .settings-page:not(.drill-down) .settings-nav {
+    flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+    padding: 10px 56px 0 16px; border-right: 0; border-bottom: 1px solid var(--border);
+  }
+  .settings-page:not(.drill-down) .settings-title { margin: 0 12px 8px 0; font-size: 15px; }
+  .settings-page:not(.drill-down) .settings-nav-item { width: auto; flex: none; white-space: nowrap; padding: 6px 10px 12px; border-radius: 0; background: none; }
+  .settings-page:not(.drill-down) .settings-nav-item:hover { background: none; }
+  .settings-page:not(.drill-down) .settings-nav-item.selected { background: none; box-shadow: inset 0 -2px 0 var(--accent); }
+  .settings-page:not(.drill-down) .settings-main { position: static; padding: 0 24px 48px; }
+  .settings-page:not(.drill-down) .settings-close-bar {
+    position: absolute; top: 0; right: 0; height: auto; z-index: 4;
+    padding: 4px 8px 0 20px; background: linear-gradient(to right, transparent, var(--bg) 18px);
+  }
+  .settings-page:not(.drill-down) .settings-close { margin: 0; }
+  .settings-page:not(.drill-down) .settings-body { padding-top: 24px; }
+  .settings-page:not(.drill-down) .settings-category-head { padding-right: 0; }
+}
+@media (max-width: 560px) {
+  .settings-page:not(.drill-down) .settings-main { padding: 0 12px 48px; }
+  .settings-page:not(.drill-down) { --settings-pad: 12px 14px; }
+}
+/* Narrow window, `drill-down`: the nav is a list of its own; a category opens over it with a
+   sticky "Settings" bar to go back. */
+@media (max-width: 760px) {
+  .settings-page.drill-down { grid-template-columns: minmax(0, 1fr); --settings-pad: 12px 14px; }
+  .settings-page.drill-down.is-index .settings-main, .settings-page.drill-down:not(.is-index) .settings-nav { display: none; }
+  .drill-down .settings-nav { border-right: 0; padding: 12px 12px 24px; }
+  .drill-down .settings-title { margin: 14px 10px 8px; }
+  .drill-down .settings-nav-item { padding: 12px 10px; font-size: 15px; }
+  .drill-down .settings-nav-item.selected { background: none; font-weight: normal; }
+  .drill-down .settings-nav-item.selected .settings-nav-icon { stroke: currentColor; }
+  .drill-down .settings-nav-item::after { content: "›"; margin-left: auto; color: var(--muted); font-size: 18px; line-height: 1; }
+  .drill-down .settings-nav-item + .settings-nav-item { border-top: 1px solid var(--border); border-radius: 0; }
+  .drill-down .settings-main { padding: 0 14px 48px; }
+  .drill-down .settings-to-index { display: flex; position: sticky; top: 0; z-index: 3; width: calc(100% + 28px); margin: 0 -14px; padding: 12px 14px; border-radius: 0; background: var(--bg); border-bottom: 1px solid var(--border); }
+  .drill-down .settings-body { padding-top: 20px; }
+}
+
+/* Settings › Agents (and any per-computer list): one section per computer, its rows padded
+   like any card row. A lone computer (the usual case) drops its name ("single"). */
+.settings-computers { display: flex; flex-direction: column; }
+.cli-machine { display: flex; flex-direction: column; }
+.cli-machine + .cli-machine { border-top: 1px solid var(--border); }
+.cli-machine.focused { box-shadow: inset 3px 0 0 var(--accent); }
+.cli-machine > * { padding: var(--settings-pad, 14px 18px); }
+.cli-machine > * + * { border-top: 1px solid var(--border); }
+.cli-machine-head {
+  display: flex; align-items: center; gap: 8px; min-height: 44px;
+  background: color-mix(in srgb, var(--panel-2) 45%, transparent);
+}
+.single .cli-machine-head > .settings-sublabel { display: none; }
+.single .cli-machine-head:not(:has(button, select)) { display: none; }
+.cli-machine > .cli-list { padding: 0; }
+.cli-list { list-style: none; display: flex; flex-direction: column; margin: 0; padding: 0; }
+.cli-list > .cli-row { padding: var(--settings-pad, 14px 18px); }
+.cli-list > .cli-row + .cli-row { border-top: 1px solid var(--border); }
+.cli-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 48px; font-size: 13px; }
+.cli-row > .spacer { flex: 1; }
+.cli-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+.cli-row.outdated .cli-dot { background: var(--warning); }
+.cli-title { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.cli-name { font-weight: 600; font-size: 14px; color: var(--strong); }
+.cli-version { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.cli-row.outdated .cli-version { color: var(--warning); }
+.cli-row.missing .cli-dot { background: transparent; box-shadow: inset 0 0 0 1px var(--muted); }
+.cli-row.missing .cli-name { color: var(--text, var(--strong)); font-weight: 500; }
+.cli-machine > .cli-missing-head { padding-top: 18px; padding-bottom: 6px; }
+.cli-machine > .cli-missing-head + .cli-missing { border-top: 0; }
+.cli-signed-in { display: inline-flex; align-items: center; gap: 6px; color: var(--ok); font-size: 12px; }
+.cli-sign-sep { color: var(--muted); }
+.cli-sign-out { background: none; border: 0; padding: 0; color: var(--muted); font: inherit; cursor: pointer; }
+.cli-sign-out:hover:not(:disabled) { color: var(--danger); text-decoration: underline; }
+.cli-uninstall { background: none; border: 0; padding: 0; color: var(--muted); font: inherit; cursor: pointer; }
+.cli-uninstall:hover:not(:disabled), .cli-uninstall.armed { color: var(--danger); text-decoration: underline; }
+.cli-uninstall.armed { font-weight: 600; }
+.cli-login-link { font-size: 12px; color: var(--accent); }
+.cli-login-note { flex-basis: 100%; font-size: 12px; }
+.cli-login-user-code { flex-basis: 100%; font-size: 13px; letter-spacing: 0.02em; }
+.cli-login-user-code strong { font-variant-numeric: tabular-nums; }
+.cli-login-code { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex-basis: 100%; }
+.cli-login-code input { flex: 1 1 180px; min-width: 140px; padding: 8px; }
+.cli-output { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+.cli-output pre { max-height: 220px; overflow: auto; margin: 6px 0 0; padding: 8px; background: var(--code-bg); border-radius: 6px; white-space: pre-wrap; word-break: break-word; }
+
+/* Settings › Models: one group per CLI ("n of m in the dropdown", Show all), its table in a
+   card, strongest first; the score sits inside its bar. */
+.model-visibility { display: flex; flex-direction: column; gap: 28px; }
+.model-visibility:empty { display: none; }
+.model-group .settings-group-title { display: flex; align-items: baseline; gap: 10px; }
+.model-group-count { font-size: 11px; font-weight: normal; text-transform: none; letter-spacing: 0; color: var(--muted); }
+.settings-sublabel { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.model-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+.model-table tr.in-picker .model-name { color: var(--strong); }
+.model-table th {
+  text-align: left; font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.04em; padding: 9px 12px;
+  border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--panel-2) 45%, transparent);
+}
+.model-table th:first-child, .model-table td:first-child { padding-left: 18px; }
+.model-table th:last-child, .model-table td:last-child { padding-right: 18px; }
+.model-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.model-table tr:last-child td { border-bottom: none; }
+.model-table tbody tr:hover td { background: color-mix(in srgb, var(--panel-2) 35%, transparent); }
+.model-table th.num, .model-table td.num {
+  text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; width: 7.5em;
+}
+.model-table td.num { color: var(--text); }
+.model-table th.bar, .model-table td.bar { width: 15em; }
+.model-table th.bar { text-align: left; }
+.model-bar { display: flex; align-items: center; min-width: 0; }
+.model-bar-track {
+  flex: 1; display: flex; align-items: stretch; min-width: 0; height: 22px;
+  border-radius: 999px; background: var(--panel-2); overflow: hidden;
+}
+.model-bar-track.empty { background: transparent; justify-content: flex-end; align-items: center; }
+.model-bar-fill {
+  display: flex; align-items: center; justify-content: flex-end; height: 100%;
+  min-width: min-content; max-width: 100%; box-sizing: border-box;
+  border-radius: 999px; padding: 0 8px;
+}
+.model-bar.intelligence .model-bar-fill { background: var(--accent); }
+.model-bar.speed .model-bar-fill { background: var(--brand); }
+.model-bar-value {
+  font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums;
+  line-height: 1; white-space: nowrap; color: var(--bar-text);
+}
+.model-bar-track.empty .model-bar-value { color: var(--text); padding-right: 2px; }
+/* One line: checkbox · name (cut with … , full on hover) · its tags. */
+.model-toggle { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; cursor: pointer; }
+.model-toggle input { flex: none; margin: 0; accent-color: var(--accent); }
+.model-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-toggle > .model-name ~ span { flex: none; margin-left: 0; white-space: nowrap; }
+.model-table th.price, .model-table td.price { width: 7em; }
+.model-table td.price.free { color: var(--ok); }
+@media (max-width: 560px) {
+  .model-table th.bar, .model-table td.bar { width: 5.4em; }
+  .model-bar-track { height: auto; background: none; overflow: visible; }
+  .model-bar.intelligence .model-bar-fill,
+  .model-bar.speed .model-bar-fill {
+    background: none; width: auto; min-width: 0; max-width: none; padding: 0;
+  }
+  .model-bar .model-bar-value { color: var(--text); }
+}
+
+.model-new {
+  margin-left: 6px; padding: 0 6px; border-radius: 6px; font-size: 10.5px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent);
+}
+.model-index {
+  margin-left: 6px; padding: 0 6px; border-radius: 6px; font-size: 10.5px;
+  background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok);
+}
+.model-limited {
+  margin-left: 6px; padding: 0 6px; border-radius: 6px; font-size: 10.5px;
+  background: color-mix(in srgb, var(--warning) 18%, transparent); color: var(--warning);
+}
+.model-preview {
+  margin-left: 6px; padding: 0 6px; border-radius: 6px; font-size: 10.5px;
+  background: color-mix(in srgb, var(--muted) 18%, transparent); color: var(--muted);
+}
+/* a model only some machines list: the picker of the others cannot offer it */
+.model-where {
+  margin-left: 6px; padding: 0 6px; border-radius: 6px; font-size: 10.5px;
+  background: color-mix(in srgb, var(--muted) 18%, transparent); color: var(--muted);
+}
+
+/* The components' own controls (components.js), so the Models and Agents pages look the same in
+   every host whatever its own button and field rules. Same button rules as in chatbox.css. */
+.acb-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px;
+  border: 1px solid transparent; border-radius: 6px; background: var(--panel-2); color: var(--text);
+  font: inherit; font-size: 13px; line-height: 1.3; cursor: pointer;
+}
+.acb-btn:disabled { opacity: 0.5; cursor: default; }
+.acb-btn-primary { background: var(--accent); color: var(--on-accent); }
+.acb-btn-primary:hover:not(:disabled) { background: var(--accent-strong, var(--accent)); filter: brightness(1.05); }
+.acb-btn-secondary { background: var(--panel-2); color: var(--text); border-color: var(--field-border); }
+.acb-btn-secondary:hover:not(:disabled) { border-color: var(--muted); }
+.acb-btn-ghost { background: transparent; color: var(--muted); }
+.acb-btn-ghost:hover:not(:disabled) { background: var(--panel-2); color: var(--text); }
+.acb-btn-sm { padding: 4px 10px; font-size: 12px; }
+.models-settings .settings-field > input, .cli-login-code input {
+  color: var(--text); background: var(--panel-2); border: 1px solid var(--field-border); border-radius: 6px; font: inherit;
+}
+.models-settings .settings-field > input:focus, .cli-login-code input:focus { outline: none; border-color: var(--accent); }
+.cli-settings .muted { color: var(--muted); }
+.cli-settings .error-text { margin: 0; color: var(--danger); }
+/* A phone (touch, or a narrow window): the fields at 16 px, under which iOS zooms in on focus. */
+@media (hover: none) and (pointer: coarse), (max-width: 760px) {
+  .models-settings .settings-field > input, .cli-login-code input { font-size: 16px; }
+}
+@supports (-webkit-touch-callout: none) {
+  .models-settings .settings-field > input, .cli-login-code input { font-size: 16px; }
+}
+/* Reduced motion: a switch jumps to its new side. */
+@media (prefers-reduced-motion: reduce) {
+  .settings-switch, .settings-switch::after { transition: none; }
+}

@@ -15,6 +15,10 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <!-- The web page files a consumer serves (the hub's /acb). They ride in the package under
+         buildTransitive/ui and the .targets copies them to <output>/acb/ at build and publish. -->
+    <None Include="ui/*" Pack="true" PackagePath="buildTransitive/ui/" />
+    <None Include="buildTransitive/D3sk.AgentCli.targets" Pack="true" PackagePath="buildTransitive/" />
     <InternalsVisibleTo Include="D3sk.AgentCli.Tests" />
   </ItemGroup>
 </Project>

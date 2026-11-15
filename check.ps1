@@ -1,4 +1,4 @@
-# The gate before a commit: restore, build with warnings as errors, every test (dotnet test).
+# The gate before a commit: restore, build with warnings as errors, every test (dotnet test, then node --test tests/ui).
 # Twin of check.sh; Windows PowerShell 5.1. config.local/dotnet.env (KEY=VALUE lines) is loaded
 # when it exists. --full = the same gate.
 $ErrorActionPreference = 'Stop'
@@ -22,4 +22,7 @@ if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
 }
 Write-Host 'Running the gate.'
 dotnet test D3sk.AgentCli.slnx -c Release
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Write-Error 'check: node is required for the UI tests'; exit 1 }
+node --test (Get-ChildItem tests/ui/*.test.cjs).FullName
 exit $LASTEXITCODE

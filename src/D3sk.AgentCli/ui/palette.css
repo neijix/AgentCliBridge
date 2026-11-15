@@ -1,0 +1,86 @@
+/* The colours and type of the shared components (the chat box, its Web dialog, Settings › Models
+   and Settings › Agents), so they look the same in every app whatever the page's own theme.
+   components.js puts `acb-ui` on each piece it mounts; inside it the colour names chatbox.css and
+   settings.css read (--bg, --text, …) are set here, over the host's. Each one reads an --acb-*
+   property first, with D3SKHAND's palette as the default: a host must not set those (that would
+   make its copy look different); they exist so this file stays the one place to change the look.
+   The defaults are D3SKHAND's Slate theme (the grey the owner runs), with its action colours.
+
+   A host page that wants the pieces to follow its own light / dark theme opts in with
+   data-acb-scheme="light" or "dark" on <html> (or on a piece's .acb-ui root): "light" switches
+   to the light palette below, either value lifts the contrast of the muted text and the field
+   borders, paints the row under the chat box with --bg (its text never sits on the host's
+   ground) and gives the controls a 44 px touch target on a touch screen. Without the attribute
+   nothing changes (D3SKHAND). One scheme per page: set it in one place.
+   Served as /acb/palette.css. */
+.acb-ui {
+  --bg: var(--acb-bg, #1e1e1e);
+  --panel: var(--acb-panel, #181818);
+  --panel-2: var(--acb-panel-2, #2a2a2a);
+  --border: var(--acb-border, #3c3c3c);
+  --text: var(--acb-text, #d4d4d4);
+  --strong: var(--acb-strong, #f3f3f3);
+  --muted: var(--acb-muted, #8a8a8a);
+  --user-bg: var(--acb-user-bg, #252526);
+  --user-border: var(--acb-user-border, #3e3e42);
+  --code-bg: var(--acb-code-bg, #1a1a1a);
+  --accent: var(--acb-accent, #4a9df8);
+  --accent-strong: var(--acb-accent-strong, #2f86e6);
+  --accent-soft: var(--acb-accent-soft, color-mix(in srgb, #4a9df8 12%, transparent));
+  --brand: var(--acb-brand, #00e0b8);
+  --ok: var(--acb-ok, #3fb950);
+  --warning: var(--acb-warning, #e3b341);
+  --danger: var(--acb-danger, #e5534b);
+  --field-border: var(--acb-field-border, #3c3c3c);  /* a field's or a switch's outline */
+  --on-accent: var(--acb-on-accent, #fff);  /* text on an --accent fill (primary button) */
+  --on-brand: var(--acb-on-brand, #06231d);  /* the Send arrow on its --brand fill */
+  --bar-text: var(--acb-bar-text, #061018);  /* a score inside its --accent / --brand bar */
+  --settings-pad: 14px 18px;
+  color-scheme: dark;
+  color: var(--text);
+  font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+}
+/* The opt-in (see the top): the dark palette with every text pair at 4.5:1 or more (muted text
+   on the chips, the placeholder, a host's chip on --panel-2) and field outlines at 3:1. */
+:where([data-acb-scheme]) .acb-ui, .acb-ui[data-acb-scheme] {
+  --muted: #9d9d9d;
+  --field-border: #737373;
+  --user-border: #6e6e6e;
+  --danger: #f06b63;
+  --on-accent: #061018;
+}
+/* The light palette: text pairs at 4.5:1 or more (a badge's text on its own 18 % tint included),
+   field and switch outlines at 3:1 on --bg, --panel and --panel-2. */
+:where([data-acb-scheme="light"]) .acb-ui, .acb-ui[data-acb-scheme="light"] {
+  --bg: #ffffff;
+  --panel: #f6f7f9;
+  --panel-2: #e9ebef;
+  --border: #d1d5db;
+  --field-border: #767b84;
+  --text: #1f2328;
+  --strong: #0e1116;
+  --muted: #555c66;
+  --user-bg: #ffffff;
+  --user-border: #858b94;
+  --code-bg: #f3f4f6;
+  --accent: #0957b8;
+  --accent-strong: #074796;
+  --accent-soft: color-mix(in srgb, #0957b8 10%, transparent);
+  --brand: #00796b;
+  --ok: #12672b;
+  --warning: #7d5200;
+  --danger: #b3202b;
+  --on-accent: #ffffff;
+  --on-brand: #ffffff;
+  --bar-text: #ffffff;
+  color-scheme: light;
+}
+/* Hidden parts stay hidden whatever display a host or component rule gives them. */
+.acb-ui[hidden], .acb-ui [hidden] { display: none !important; }
+/* A Settings category paints its own ground, so its light text stays readable on a light page,
+   with room around it so the ground reads as a panel on any page colour. */
+.acb-ui.acb-settings { background: var(--bg); padding: 20px 24px 24px; border-radius: 12px; }
+/* Zero specificity: the components' own rules (a chip's 12.5px) still win. */
+:where(.acb-ui) :where(button, select, input, textarea) { font: inherit; letter-spacing: inherit; }

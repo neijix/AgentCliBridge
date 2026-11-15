@@ -1,0 +1,14 @@
+<Project>
+  <!-- Copies the package's web page files (chatbox.css, composer.js, ...) next to a consumer's
+       build and publish output, flat under acb/. Opt out: <CopyAgentCliPageFiles>false</CopyAgentCliPageFiles>. -->
+  <PropertyGroup>
+    <CopyAgentCliPageFiles Condition="'$(CopyAgentCliPageFiles)' == ''">true</CopyAgentCliPageFiles>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(CopyAgentCliPageFiles)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)ui/*"
+          Link="acb/%(Filename)%(Extension)"
+          Visible="false"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
