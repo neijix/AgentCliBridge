@@ -36,10 +36,13 @@ public class AgentRegistryTests
     [Fact]
     public void Resolves_each_command_with_its_own_discovery_rule()
     {
-        var found = AgentRegistry.ResolveBinary("cursor-agent", pathEnv: "/bin", home: "/h", isUsable: p => p == "/bin/agent");
-        Assert.Equal("/bin/agent", found);
-        Assert.Equal("/bin/claude", AgentRegistry.ResolveBinary("claude", "/bin", "/h", null, p => p == "/bin/claude"));
-        Assert.Equal("/bin/mytool", AgentRegistry.ResolveBinary("mytool", "/bin", "/h", null, p => p == "/bin/mytool"));
+        // PATH entries are joined the host's way: /bin\agent on Windows.
+        var agent = Path.Combine("/bin", "agent");
+        var claude = Path.Combine("/bin", "claude");
+        var mytool = Path.Combine("/bin", "mytool");
+        Assert.Equal(agent, AgentRegistry.ResolveBinary("cursor-agent", pathEnv: "/bin", home: "/h", isUsable: p => p == agent));
+        Assert.Equal(claude, AgentRegistry.ResolveBinary("claude", "/bin", "/h", null, p => p == claude));
+        Assert.Equal(mytool, AgentRegistry.ResolveBinary("mytool", "/bin", "/h", null, p => p == mytool));
         Assert.Null(AgentRegistry.ResolveBinary("grok", "/bin", "/h", null, _ => false));
         Assert.Null(AgentRegistry.ResolveBinary("  ", "/bin", "/h", null, _ => true));
     }

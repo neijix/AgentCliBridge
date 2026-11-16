@@ -286,6 +286,7 @@ public sealed class AgentTurnTests : IDisposable
     [Fact]
     public async Task A_long_prompt_travels_on_stdin_for_claude_and_grok_only_when_it_is_too_long()
     {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "only Linux caps one argument (MAX_ARG_STRLEN): macOS takes this prompt on the command line");
         var cli = Cli("cat >&2; exit 4"); // echoes stdin as the error text
         var big = new string('x', 300_000);
 

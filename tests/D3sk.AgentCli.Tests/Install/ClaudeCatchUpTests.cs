@@ -12,6 +12,7 @@ public sealed class ClaudeCatchUpTests : IDisposable
 
     private string CaskFile()
     {
+        Assert.SkipWhen(OperatingSystem.IsWindows(), "Homebrew casks exist only on macOS and Linux: every Windows path is refused");
         var dir = Path.Combine(_root, "Caskroom", "claude-code@latest", "2.1.280");
         Directory.CreateDirectory(dir);
         var file = Path.Combine(dir, "claude");

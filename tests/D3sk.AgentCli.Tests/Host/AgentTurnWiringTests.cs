@@ -220,8 +220,11 @@ public sealed class AgentTurnWiringTests : IDisposable
         var cli = Cli($"echo \"$@\" > '{File_("argv.txt")}'\necho \"$PATH\" > '{File_("path.txt")}'\necho \"$WEBSCOUT_CALLER\" > '{File_("caller.txt")}'\n{Init}\n{Text}\n{Result}");
         var scout = new ScoutPolicy(candidates: [checkout], caller: "wiring-test", shimFolder: shims);
 
-        await Collect(Turn(cli, r => r with { NoWebScout = false, WebScout = scout }));
+        var events = await Collect(Turn(cli, r => r with { NoWebScout = false, WebScout = scout }));
 
+        // A turn that never ran its CLI wrote no argv.txt: name its error, not the missing file.
+        var failed = events.OfType<StreamError>().FirstOrDefault();
+        Assert.True(failed is null, $"the turn failed: {failed?.Code}: {failed?.Message}");
         var argv = File.ReadAllText(File_("argv.txt"));
         Assert.Contains("--disallowedTools WebSearch,WebFetch", argv);
         Assert.Contains("D3SKWEBSCOUT only", argv);

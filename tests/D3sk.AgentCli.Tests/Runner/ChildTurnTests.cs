@@ -42,12 +42,28 @@ public class ChildTurnTests
         try
         {
             using var p = Process.GetProcessById(pid);
-            return !p.HasExited && !File.ReadAllText($"/proc/{pid}/stat").Contains(") Z ");
+            return !p.HasExited && !IsZombie(pid);
         }
         catch (Exception e) when (e is ArgumentException or InvalidOperationException or IOException)
         {
             return false;
         }
+    }
+
+    /// <summary>Linux reads <c>/proc</c>; macOS has none, so <c>ps</c> says (a gone process prints nothing).</summary>
+    private static bool IsZombie(int pid)
+    {
+        if (OperatingSystem.IsLinux())
+        {
+            return File.ReadAllText($"/proc/{pid}/stat").Contains(") Z ");
+        }
+        using var ps = Process.Start(new ProcessStartInfo("/bin/ps", ["-o", "stat=", "-p", pid.ToString(System.Globalization.CultureInfo.InvariantCulture)])
+        {
+            RedirectStandardOutput = true,
+        })!;
+        var stat = ps.StandardOutput.ReadToEnd().Trim();
+        ps.WaitForExit();
+        return stat.Length == 0 || stat.StartsWith('Z');
     }
 
     [Fact]

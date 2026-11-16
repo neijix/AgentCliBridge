@@ -37,6 +37,7 @@ public class AgyDiscoveryTests
     [Fact]
     public void Local_app_data_defaults_under_home()
     {
+        Assert.SkipWhen(!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LOCALAPPDATA")), "LOCALAPPDATA is set here (always on Windows): it wins over the home default");
         var path = Path.Combine("/h", "AppData", "Local", "agy", "bin", "agy");
         Assert.Equal(path, AgyDiscovery.Resolve("/a", "/h", Only(path), ""));
     }
