@@ -338,7 +338,22 @@ public sealed class ModelCatalogTests : IDisposable
     public async Task A_gateway_is_read_without_credentials_a_redirect_is_refused_and_a_huge_answer_stops()
     {
         var (server, number) = LoopbackGateway.StartOnFreePort();
-        using var _ = server;
+        try
+        {
+            await ReadThroughGateway(server, number);
+        }
+        finally
+        {
+            if (server.IsListening)
+            {
+                server.Stop(); // once: a second Stop re-binds the port like Close (see CloseStopped)
+            }
+            LoopbackGateway.CloseStopped(server);
+        }
+    }
+
+    private static async Task ReadThroughGateway(HttpListener server, int number)
+    {
         var seen = new List<(string Path, bool Credentials)>();
         var huge = false;
         var loop = Task.Run(() =>

@@ -173,6 +173,23 @@ public sealed class LoopbackGateway : IDisposable
         {
             // the loop ends by its listener stopping; nothing else to observe
         }
-        _listener.Close();
+        CloseStopped(_listener);
+    }
+
+    /// <summary>
+    /// Closes a listener already stopped. On Linux the managed listener's Close removes the prefixes a
+    /// second time, which binds the port again to look up its endpoint: when a parallel test has taken
+    /// the freed port that bind throws "Address already in use". The port is released by then.
+    /// </summary>
+    public static void CloseStopped(HttpListener listener)
+    {
+        try
+        {
+            listener.Close();
+        }
+        catch (HttpListenerException)
+        {
+            // the port belongs to another test now; nothing of ours is left open
+        }
     }
 }
