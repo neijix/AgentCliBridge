@@ -113,7 +113,7 @@ public static class InstallPlans
         var npm = which("npm");
         if (string.IsNullOrEmpty(npm))
         {
-            npm = find([.. NpmPlaces, Path.Combine(home, ".local", "bin", "npm")]);
+            npm = find([.. NpmPlaces, CliPath.Join([home, ".local", "bin", "npm"], windows: false)]);
         }
         if (npm.Length > 0)
         {
@@ -126,7 +126,7 @@ public static class InstallPlans
         }
         if (brew.Length > 0)
         {
-            var brewNpm = Path.Combine(Path.GetDirectoryName(brew) ?? "", "npm");
+            var brewNpm = CliPath.Join([CliPath.Parent(brew, windows: false), "npm"], windows: false);
             return new CliPlan
             {
                 Argv = [brew, "install", "node"],
