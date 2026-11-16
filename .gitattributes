@@ -3,3 +3,5 @@ tests/streams/** -text
 tests/wire/** -text
 tests/frozen-manifest.txt text eol=lf
 tests/fixtures/** -text
+# The page files ship byte-identical to their pinned rev (Ui/PageFilesTests): a Windows checkout must not turn them CRLF.
+src/D3sk.AgentCli/ui/** -text
