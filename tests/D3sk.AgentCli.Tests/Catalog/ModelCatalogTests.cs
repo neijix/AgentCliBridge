@@ -337,13 +337,8 @@ public sealed class ModelCatalogTests : IDisposable
     [Fact]
     public async Task A_gateway_is_read_without_credentials_a_redirect_is_refused_and_a_huge_answer_stops()
     {
-        using var server = new HttpListener();
-        var port = System.Net.Sockets.TcpListener.Create(0);
-        port.Start();
-        var number = ((IPEndPoint)port.LocalEndpoint).Port;
-        port.Stop();
-        server.Prefixes.Add($"http://127.0.0.1:{number}/");
-        server.Start();
+        var (server, number) = LoopbackGateway.StartOnFreePort();
+        using var _ = server;
         var seen = new List<(string Path, bool Credentials)>();
         var huge = false;
         var loop = Task.Run(() =>

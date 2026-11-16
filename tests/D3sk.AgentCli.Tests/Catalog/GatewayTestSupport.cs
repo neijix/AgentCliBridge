@@ -19,7 +19,7 @@ public sealed class LoopbackGateway : IDisposable
     /// <summary>A minimal neutral <c>/v1/models</c> answer.</summary>
     public const string ModelsAnswer = """{"data": [{"id": "claude-opus-5-5", "display_name": "Opus"}]}""";
 
-    private readonly HttpListener _listener = new();
+    private readonly HttpListener _listener;
     private readonly List<SeenRequest> _seen = [];
     private readonly List<HttpListenerContext> _held = [];
     private readonly Task _loop;
@@ -27,14 +27,36 @@ public sealed class LoopbackGateway : IDisposable
     /// <summary>Starts on a free loopback port.</summary>
     public LoopbackGateway()
     {
-        var probe = TcpListener.Create(0);
-        probe.Start();
-        var port = ((IPEndPoint)probe.LocalEndpoint).Port;
-        probe.Stop();
+        (_listener, var port) = StartOnFreePort();
         BaseUrl = $"http://127.0.0.1:{port}";
-        _listener.Prefixes.Add($"{BaseUrl}/");
-        _listener.Start();
         _loop = Task.Run(Serve);
+    }
+
+    /// <summary>
+    /// A started <see cref="HttpListener"/> on a free loopback port. The port is probed then bound, and
+    /// a test running in parallel can take it in between ("Address already in use"): a failed start
+    /// leaves the listener unusable, so each attempt is a new listener on a new port.
+    /// </summary>
+    public static (HttpListener Listener, int Port) StartOnFreePort()
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            var probe = TcpListener.Create(0);
+            probe.Start();
+            var port = ((IPEndPoint)probe.LocalEndpoint).Port;
+            probe.Stop();
+            var listener = new HttpListener();
+            listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+            try
+            {
+                listener.Start();
+                return (listener, port);
+            }
+            catch (HttpListenerException) when (attempt < 10)
+            {
+                listener.Close();
+            }
+        }
     }
 
     /// <summary>The server's origin, without a trailing slash.</summary>
