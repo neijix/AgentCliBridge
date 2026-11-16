@@ -1,3 +1,4 @@
+using D3sk.AgentCli.Catalog;
 using D3sk.AgentCli.Specs.Agy;
 
 namespace D3sk.AgentCli.Tests.Specs.Agy;
@@ -85,5 +86,24 @@ public class AgyArgvTests
         Assert.Equal("agy", AgySpec.Command);
         Assert.Equal("antigravity", AgySpec.Flavor);
         Assert.Equal("default", AgySpec.Models[0]);
+    }
+
+    /// <summary><c>agy models</c> as CLI 1.5.9 printed it on 2026-11-16 (Orchestrator left out of the curated list).</summary>
+    private const string AgyModelsOutput =
+        "Fetching available models...\n" +
+        "gemini-4-argon-medium\tGemini 4 Argon (Medium)\ngemini-4-argon-high\tGemini 4 Argon (High)\ngemini-4-argon-low\tGemini 4 Argon (Low)\n" +
+        "gemini-4-hydrogen-high\tGemini 4 Hydrogen (High)\ngemini-4-hydrogen-xhigh\tGemini 4 Hydrogen (XHigh)\n" +
+        "gemini-4-hydrogen-medium\tGemini 4 Hydrogen (Medium)\ngemini-4-hydrogen-low\tGemini 4 Hydrogen (Low)\n" +
+        "gemini-pro-orchestrator-g1-pro\tOrchestrator (Argon)\n" +
+        "gemini-3.8-flash-high\tGemini 3.8 Flash (High)\ngemini-3.8-flash-medium\tGemini 3.8 Flash (Medium)\ngemini-3.8-flash-low\tGemini 3.8 Flash (Low)\n" +
+        "claude-opus-5-5-low\tClaude Opus 5.5 (Low)\nclaude-opus-5-5-medium\tClaude Opus 5.5 (Medium)\nclaude-opus-5-5-high\tClaude Opus 5.5 (High)\n" +
+        "claude-sonnet-5-5-low\tClaude Sonnet 5.5 (Low)\nclaude-sonnet-5-5-medium\tClaude Sonnet 5.5 (Medium)\nclaude-sonnet-5-5-high\tClaude Sonnet 5.5 (High)\n" +
+        "gpt-oss-120b-medium\tGPT-OSS 120B (Medium)\n";
+
+    [Fact]
+    public void Every_curated_model_is_one_the_cli_lists_because_an_unknown_id_fails_the_turn()
+    {
+        var listed = ModelListParser.ParseModels(AgyModelsOutput);
+        Assert.All(AgySpec.Models.Skip(1), id => Assert.Contains(id, listed));
     }
 }

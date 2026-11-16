@@ -25,25 +25,28 @@ public static class AgySpec
 
     /// <summary>
     /// Curated model ids passed verbatim to <c>--model</c>, as <c>agy models</c> lists them (verified
-    /// 2026-08-27, CLI 1.1.22). "default" stays first so settings that stored it still resolve to the
-    /// CLI's own default.
+    /// 2026-11-16, CLI 1.5.9: an id it no longer lists fails the turn before it starts). "default" stays
+    /// first so settings that stored it still resolve to the CLI's own default.
     /// </summary>
     public static IReadOnlyList<string> Models { get; } =
     [
         "default",
-        "gemini-3.1-pro-high",
-        "gemini-3.1-pro-low",
-        "gemini-3.7-flash-high",
-        "gemini-3.7-flash-medium",
-        "gemini-3.7-flash-low",
-        "gemini-3.6-flash-high",
-        "gemini-3.6-flash-medium",
-        "gemini-3.6-flash-low",
-        "gemini-3.5-flash-high",
-        "gemini-3.5-flash-medium",
-        "gemini-3.5-flash-low",
-        "claude-sonnet-4-6",
-        "claude-opus-4-6-thinking",
+        "gemini-4-argon-medium",
+        "gemini-4-argon-high",
+        "gemini-4-argon-low",
+        "gemini-4-hydrogen-high",
+        "gemini-4-hydrogen-xhigh",
+        "gemini-4-hydrogen-medium",
+        "gemini-4-hydrogen-low",
+        "gemini-3.8-flash-high",
+        "gemini-3.8-flash-medium",
+        "gemini-3.8-flash-low",
+        "claude-opus-5-5-low",
+        "claude-opus-5-5-medium",
+        "claude-opus-5-5-high",
+        "claude-sonnet-5-5-low",
+        "claude-sonnet-5-5-medium",
+        "claude-sonnet-5-5-high",
         "gpt-oss-120b-medium",
     ];
 }
