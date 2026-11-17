@@ -3,9 +3,10 @@
 // (`event: <name>` + one JSON data line, every data carrying "v"); `fold` here and `fold` there give
 // the same parts (tests/wire/*.json, checked by both). No dependency.
 // Plain script, no build step: served as /acb/stream.js it defines window.AgentStream; under
-// node it is a CommonJS module (the tests) and globalThis.AgentStream.
-(function (root) {
-  "use strict";
+// node it is a CommonJS module (the tests) and globalThis.AgentStream. A block, not a function,
+// keeps the names private.
+"use strict";
+{
 
   const WIRE_VERSION = 1;
 
@@ -187,7 +188,7 @@
 
   const AgentStream = Object.freeze({ WIRE_VERSION, createParser, consume, follow, fold });
   if (typeof module !== "undefined" && module.exports) module.exports = AgentStream;
-  if (root) root.AgentStream = AgentStream;
   // A page's window; else the global object (a vm-run page in a test, or node), so a host script
   // that reads AgentStream by name finds it there too.
-})(typeof window !== "undefined" ? window : typeof globalThis !== "undefined" ? globalThis : null);
+  (typeof window !== "undefined" ? window : globalThis).AgentStream = AgentStream;
+}

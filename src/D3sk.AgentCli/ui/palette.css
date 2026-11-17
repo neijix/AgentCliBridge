@@ -1,4 +1,4 @@
-/* The colours and type of the shared components (the chat box, its Web dialog, Settings › Models
+/* The colours, type and buttons of the shared components (the chat box, its Web dialog, Settings › Models
    and Settings › Agents), so they look the same in every app whatever the page's own theme.
    components.js puts `acb-ui` on each piece it mounts; inside it the colour names chatbox.css and
    settings.css read (--bg, --text, …) are set here, over the host's. Each one reads an --acb-*
@@ -84,3 +84,19 @@
 .acb-ui.acb-settings { background: var(--bg); padding: 20px 24px 24px; border-radius: 12px; }
 /* Zero specificity: the components' own rules (a chip's 12.5px) still win. */
 :where(.acb-ui) :where(button, select, input, textarea) { font: inherit; letter-spacing: inherit; }
+
+/* The components' own buttons (the Web dialog, the context pop, Settings › Models and Agents), so
+   they look the same in every host whatever its own button rules. */
+.acb-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px;
+  border: 1px solid transparent; border-radius: 6px; background: var(--panel-2); color: var(--text);
+  font: inherit; font-size: 13px; line-height: 1.3; cursor: pointer;
+}
+.acb-btn:disabled { opacity: 0.5; cursor: default; }
+.acb-btn-primary { background: var(--accent); color: var(--on-accent); }
+.acb-btn-primary:hover:not(:disabled) { background: var(--accent-strong, var(--accent)); filter: brightness(1.05); }
+.acb-btn-secondary { background: var(--panel-2); color: var(--text); border-color: var(--field-border); }
+.acb-btn-secondary:hover:not(:disabled) { border-color: var(--muted); }
+.acb-btn-ghost { background: transparent; color: var(--muted); }
+.acb-btn-ghost:hover:not(:disabled) { background: var(--panel-2); color: var(--text); }
+.acb-btn-sm { padding: 4px 10px; font-size: 12px; }

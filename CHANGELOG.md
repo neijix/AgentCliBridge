@@ -5,6 +5,12 @@ with its own `v*` tags; this file does not cover it.
 
 ## [Unreleased]
 
+### Changed
+- The page files follow the Python line's `agent_cli_bridge/ui/` at rev `a379df29`: the components'
+  buttons (`.acb-btn`) are styled once, in `palette.css`, instead of in both `chatbox.css` and
+  `settings.css`; `stream.js` keeps its names private in a block instead of a wrapper function.
+  A host that shows the chat box or Settings › Models / Agents already loads `palette.css`.
+
 ## [dotnet-v0.5.0] — 2026-11-15
 
 ### Added
