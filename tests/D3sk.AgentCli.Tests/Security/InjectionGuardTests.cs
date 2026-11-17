@@ -293,6 +293,8 @@ public class InjectionGuardTests
     [InlineData("grep -rn 'curl https://example.com' src", false)]
     [InlineData("grep -rn WebScout src && ./check.sh", false)]
     [InlineData("dotnet test D3sk.AgentCli.slnx -c Release", false)]
+    [InlineData("env -u", false)]
+    [InlineData("ls; sudo -u", false)]
     public void A_shell_line_that_runs_a_downloader_may_have_saved_a_page(string command, bool expected) =>
         Assert.Equal(expected, LocalReads.MayDownload(new ToolCall("t1", "Bash", new JsonObject { ["command"] = command })));
 

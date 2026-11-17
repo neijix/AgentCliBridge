@@ -94,30 +94,35 @@ internal static class LocalReads
         {
             return true; // `$(which curl) -so p URL`: the program is named only inside the substitution
         }
-        foreach (var segment in segments)
+        return segments.Any(segment => SegmentRunsDownloader(segment, depth));
+    }
+
+    private static bool SegmentRunsDownloader(List<string> segment, int depth)
+    {
+        var i = CommandIndex(segment);
+        if (i == segment.Count)
         {
-            var i = 0;
-            while (i < segment.Count && (IsAssignment(segment[i]) || Wrappers.Contains(segment[i]) || segment[i].StartsWith('-') || segment[i].All(char.IsDigit)))
-            {
-                i += WrapperValueOptions.Contains(segment[i]) ? 2 : 1; // `env -u HOME curl`: HOME is a value, not the command
-            }
-            if (i == segment.Count)
-            {
-                continue;
-            }
-            var name = Path.GetFileName(segment[i]);
-            var rest = segment.Skip(i + 1).ToList();
-            if (Downloaders.Contains(name) || (name == "git" && GitSubcommand(rest) is { } sub && GitDownloads.Contains(sub)))
-            {
-                return true;
-            }
-            var script = rest.SkipWhile(a => !(a.StartsWith('-') && !a.StartsWith("--", StringComparison.Ordinal) && a.Contains('c'))).Skip(1).FirstOrDefault();
-            if (Shells.Contains(name) && script is not null && RunsDownloader(script, depth + 1))
-            {
-                return true;
-            }
+            return false;
         }
-        return false;
+        var name = Path.GetFileName(segment[i]);
+        var rest = segment.Skip(i + 1).ToList();
+        if (Downloaders.Contains(name) || (name == "git" && GitSubcommand(rest) is { } sub && GitDownloads.Contains(sub)))
+        {
+            return true;
+        }
+        var script = rest.SkipWhile(a => !(a.StartsWith('-') && !a.StartsWith("--", StringComparison.Ordinal) && a.Contains('c'))).Skip(1).FirstOrDefault();
+        return Shells.Contains(name) && script is not null && RunsDownloader(script, depth + 1);
+    }
+
+    /// <summary>Index of the program word, past assignments, wrappers and their options.</summary>
+    private static int CommandIndex(List<string> segment)
+    {
+        var i = 0;
+        while (i < segment.Count && (IsAssignment(segment[i]) || Wrappers.Contains(segment[i]) || segment[i].StartsWith('-') || segment[i].All(char.IsDigit)))
+        {
+            i += WrapperValueOptions.Contains(segment[i]) ? 2 : 1; // `env -u HOME curl`: HOME is a value, not the command
+        }
+        return Math.Min(i, segment.Count);
     }
 
     /// <summary>The simple commands of a line, redirects and their targets dropped; null on unbalanced quotes.
