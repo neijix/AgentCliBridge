@@ -229,22 +229,6 @@ img.attachment-thumb.clickable { cursor: zoom-in; }
 .web-choice-main small { font-weight: 400; }
 .web-count { width: 6em; }
 
-/* The components' own buttons (the Web dialog, the context pop), so they look the same in every
-   host whatever its own button rules. Same rules as in settings.css. */
-.acb-btn {
-  display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px;
-  border: 1px solid transparent; border-radius: 6px; background: var(--panel-2); color: var(--text);
-  font: inherit; font-size: 13px; line-height: 1.3; cursor: pointer;
-}
-.acb-btn:disabled { opacity: 0.5; cursor: default; }
-.acb-btn-primary { background: var(--accent); color: var(--on-accent); }
-.acb-btn-primary:hover:not(:disabled) { background: var(--accent-strong, var(--accent)); filter: brightness(1.05); }
-.acb-btn-secondary { background: var(--panel-2); color: var(--text); border-color: var(--field-border); }
-.acb-btn-secondary:hover:not(:disabled) { border-color: var(--muted); }
-.acb-btn-ghost { background: transparent; color: var(--muted); }
-.acb-btn-ghost:hover:not(:disabled) { background: var(--panel-2); color: var(--text); }
-.acb-btn-sm { padding: 4px 10px; font-size: 12px; }
-
 /* Narrow window: the context ring stays, its percentage goes (the details still open on a click). */
 @media (max-width: 760px) {
   .context-meter span { display: none; }

@@ -18,7 +18,7 @@
 - ``chatbox.css``: the chat box — the message, its controls inside along the bottom — and its
   Web search dialog.
 - ``settings.css``: the Settings page (nav, categories, cards), Settings › Agents and › Models.
-- ``palette.css``: the components' own colours and type (on ``.acb-ui``), so a page's theme
+- ``palette.css``: the components' own colours, type and buttons (on ``.acb-ui``), so a page's theme
   cannot make them look different from one app to the next.
 
 A host serves ``UI_DIR`` as static files (mounted at ``/acb``) and loads them before its own
