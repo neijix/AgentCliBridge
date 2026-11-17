@@ -105,7 +105,7 @@ internal static partial class ScoutCalls
     }
 
     /// <summary>A POSIX shell word split (quotes, backslashes), with an operator run split off as its own word; null when quotes are unbalanced.</summary>
-    private static List<string>? Split(string s)
+    internal static List<string>? Split(string s)
     {
         var words = new List<string>();
         var cur = new StringBuilder();

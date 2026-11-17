@@ -54,8 +54,12 @@ public sealed class TurnRecorder
     public InjectionDetected Detected(InjectionDetected detection)
     {
         var fields = CallFields(detection.CallId, detection.ToolName);
-        _taintedBy = _taintedBy.Length > 0 ? _taintedBy : (string)fields["url"]!;
+        _taintedBy = _taintedBy.Length > 0 || detection.IsLocal ? _taintedBy : (string)fields["url"]!;
         var entry = Entry(fields, SecurityLog.InjectionDetectedKind);
+        if (detection.IsLocal)
+        {
+            entry["local"] = true;
+        }
         entry["rules"] = new JsonArray(detection.Rules.Select(r => (JsonNode?)JsonValue.Create(r)).ToArray());
         entry["excerpt"] = SecurityText.Clip(detection.Excerpt);
         var id = _log.Record(entry);

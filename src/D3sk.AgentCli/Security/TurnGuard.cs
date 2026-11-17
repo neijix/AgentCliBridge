@@ -15,7 +15,8 @@ namespace D3sk.AgentCli.Security;
 /// a path, a chain, <c>--allow-risky</c> and every other tool go to the host. Once tainted, <see cref="InjectionGuard.Review"/>
 /// denies whatever is not read-only. On a non-live turn nothing can answer an approval, so the first HIGH finding kills
 /// the CLI's process tree before the error is yielded, then <see cref="Completed"/> with -1 ends the turn; two LOW
-/// findings only taint a live turn.
+/// findings only taint a live turn. A finding in local workspace content (a file read, a local shell reader:
+/// <see cref="LocalReads"/>) never stops a turn or taints it; it is still yielded and logged.
 /// </remarks>
 internal sealed class TurnGuard(
     InjectionGuard? guard, ScoutPolicy? scout, TurnRecorder? recorder, TurnInput? input, bool isLive, bool activity)
@@ -102,7 +103,7 @@ internal sealed class TurnGuard(
 
     private bool StopsTurn(InjectionDetected detection)
     {
-        if (isLive)
+        if (isLive || detection.IsLocal)
         {
             return false;
         }

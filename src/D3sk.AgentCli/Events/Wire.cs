@@ -126,6 +126,10 @@ public static class Wire
                 data["rules"] = new JsonArray(e.Rules.Select(rule => (JsonNode?)JsonValue.Create(rule)).ToArray());
                 data["excerpt"] = capped(e.Excerpt);
                 data["details_url"] = e.DetailsUrl;
+                if (e.IsLocal)
+                {
+                    data["local"] = true; // reported only: it neither tainted nor stopped the turn
+                }
                 return "injection_detected";
             case ActionBlocked e:
                 data["call_id"] = e.CallId;

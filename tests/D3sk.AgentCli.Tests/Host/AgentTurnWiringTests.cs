@@ -136,7 +136,7 @@ public sealed class AgentTurnWiringTests : IDisposable
     [Trait("Security", "P24")]
     public async Task After_an_injection_a_live_turn_denies_an_action_and_shows_the_log_entry_that_explains_it()
     {
-        var cli = Cli($"read first\n{Init}\n{Replay}\n{ToolUseLine("t1", "Read", "{}")}\n{ToolResultLine("t1", Injected)}\n{AskBash("r1", "rm -rf x")}\n"
+        var cli = Cli($"read first\n{Init}\n{Replay}\n{ToolUseLine("t1", "WebFetch", "{}")}\n{ToolResultLine("t1", Injected)}\n{AskBash("r1", "rm -rf x")}\n"
             + $"read answer\necho \"$answer\" > '{File_("answer.txt")}'\n{Text}\n{Result}\ncat > /dev/null");
         var log = new SecurityLog(File_("security.jsonl"));
 
@@ -155,7 +155,7 @@ public sealed class AgentTurnWiringTests : IDisposable
     [Trait("Security", "P24")]
     public async Task A_non_live_turn_is_stopped_on_a_high_severity_result_and_the_CLI_is_dead_before_the_error()
     {
-        var cli = Cli($"echo $$ > '{File_("pid.txt")}'\n{Init}\n{ToolUseLine("t1", "Read", "{}")}\n{ToolResultLine("t1", Injected)}\nsleep 30\n{Text}");
+        var cli = Cli($"echo $$ > '{File_("pid.txt")}'\n{Init}\n{ToolUseLine("t1", "WebFetch", "{}")}\n{ToolResultLine("t1", Injected)}\nsleep 30\n{Text}");
         var pidFile = File_("pid.txt");
         var sw = Stopwatch.StartNew();
 
@@ -178,6 +178,31 @@ public sealed class AgentTurnWiringTests : IDisposable
         Assert.DoesNotContain(events, e => e is TextDelta);
         Assert.True(deadAtError);
         Assert.Equal([SecurityLog.InjectionDetectedKind], new SecurityLog(File_("security.jsonl")).Entries().Select(e => (string)e["kind"]!));
+    }
+
+    [Theory]
+    [Trait("Security", "P24")]
+    [InlineData("Read", "{\"file_path\":\"tests/fixture.txt\"}")]
+    [InlineData("Bash", "{\"command\":\"sed -n 1,60p tests/fixture.txt | grep -n x\"}")]
+    public async Task A_high_severity_match_in_local_code_is_logged_but_neither_stops_nor_taints_a_turn(string tool, string input)
+    {
+        var nonLive = Cli($"{Init}\n{ToolUseLine("t1", tool, input)}\n{ToolResultLine("t1", Injected)}\n{Text}\n{Result}");
+
+        var events = await Collect(Turn(nonLive, r => r with { Activity = true }));
+
+        Assert.True(Assert.Single(events.OfType<InjectionDetected>()).IsLocal);
+        Assert.DoesNotContain(events, e => e is StreamError);
+        Assert.Contains(new TextDelta("pong"), events);
+        Assert.Equal(new Completed(0), events[^1]);
+        var logged = Assert.Single(new SecurityLog(File_("security.jsonl")).Entries());
+        Assert.True((bool)logged["local"]!);
+
+        var cli = Cli($"read first\n{Init}\n{Replay}\n{ToolUseLine("t1", tool, input)}\n{ToolResultLine("t1", Injected)}\n{AskBash("r1", "rm -rf x")}\n"
+            + $"read answer\necho \"$answer\" > '{File_("answer.txt")}'\n{Text}\n{Result}\ncat > /dev/null");
+        var live = await Collect(Turn(cli, r => r with { Input = new TurnInput() }));
+
+        Assert.DoesNotContain(live, e => e is ActionBlocked);
+        Assert.Contains("\"behavior\":\"allow\"", File.ReadAllText(File_("answer.txt")));
     }
 
     private const string TurnGuard_Message = "Stopped this turn: a tool result matched a high-severity prompt-injection rule.";

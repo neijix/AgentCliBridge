@@ -8,7 +8,8 @@ namespace D3sk.AgentCli.Security;
 /// <summary>
 /// Prompt-injection defense for one agent turn, in three layers, all heuristic: a policy appended to the
 /// system text (only the user gives instructions; tool output is data), detection (every <see cref="ToolResult"/>
-/// is scanned; a hit yields <see cref="InjectionDetected"/> and taints the turn) and containment (once tainted,
+/// is scanned; a hit yields <see cref="InjectionDetected"/> and taints the turn, unless the result is local workspace
+/// content (<see cref="LocalReads"/>), which is only reported) and containment (once tainted,
 /// a tool approval for anything not known to be read-only is denied before the host sees it). Containment only
 /// reaches tools that ask for approval; the policy text is what protects every flavor.
 /// </summary>
@@ -48,6 +49,7 @@ public sealed partial class InjectionGuard
     private readonly HashSet<string> _safeTools;
     private readonly List<InjectionDetected> _detections = [];
     private readonly IReadOnlyList<Rule> _rules;
+    private bool _mayHaveDownloaded; // a local file may now hold a page this turn fetched: reads are no longer exempt
 
     /// <summary>Deny non-read-only approvals once tainted (false: only detect and report).</summary>
     public bool BlockAfterInjection { get; }
@@ -61,8 +63,8 @@ public sealed partial class InjectionGuard
     /// <summary>Every detection of this turn.</summary>
     public IReadOnlyList<InjectionDetected> Detections => _detections;
 
-    /// <summary>True once a tool result was flagged.</summary>
-    public bool IsTainted => _detections.Count > 0;
+    /// <summary>True once a tool result that is not local workspace content was flagged.</summary>
+    public bool IsTainted => _detections.Any(d => !d.IsLocal);
 
     /// <summary>A guard for one turn; <paramref name="safeTools"/> are allowed after a detection on top of the defaults.</summary>
     public InjectionGuard(bool blockAfterInjection = true, IEnumerable<string>? safeTools = null, string policyText = PolicyText, IEnumerable<Rule>? rules = null)
@@ -89,6 +91,7 @@ public sealed partial class InjectionGuard
         if (streamEvent is ToolCall call)
         {
             _toolCalls[call.CallId] = call;
+            _mayHaveDownloaded |= LocalReads.MayDownload(call);
             return null;
         }
         if (streamEvent is not ToolResult result)
@@ -107,7 +110,9 @@ public sealed partial class InjectionGuard
         {
             return null;
         }
-        var detection = new InjectionDetected(result.CallId, _toolCalls.TryGetValue(result.CallId, out var known) ? known.Name : "tool", rules, excerpt);
+        var known = _toolCalls.GetValueOrDefault(result.CallId);
+        var isLocal = !_mayHaveDownloaded && known is not null && rules[0] != PageWithheldRule && LocalReads.IsLocal(known);
+        var detection = new InjectionDetected(result.CallId, known?.Name ?? "tool", rules, excerpt, IsLocal: isLocal);
         _detections.Add(detection);
         return detection;
     }

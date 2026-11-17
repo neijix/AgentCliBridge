@@ -50,7 +50,7 @@ public sealed record InputAccepted(string Text) : StreamEvent;
 public sealed record ModeChanged(string Mode, string Error = "") : StreamEvent;
 
 /// <summary>A tool's output looks like a prompt injection; the turn is now tainted.</summary>
-public sealed record InjectionDetected(string CallId, string ToolName, IReadOnlyList<string> Rules, string Excerpt, string DetailsUrl = "") : StreamEvent;
+public sealed record InjectionDetected(string CallId, string ToolName, IReadOnlyList<string> Rules, string Excerpt, string DetailsUrl = "", bool IsLocal = false) : StreamEvent;
 
 /// <summary>The guard denied a tool approval on a tainted turn.</summary>
 public sealed record ActionBlocked(string RequestId, string CallId, string Name, JsonNode? Arguments, string Reason, string DetailsUrl = "") : StreamEvent;

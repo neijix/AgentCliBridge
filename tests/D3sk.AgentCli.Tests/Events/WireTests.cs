@@ -52,6 +52,7 @@ public class WireTests
         { new ToolResult("c1", "ok", true), "tool_result", """{"v":1,"call_id":"c1","output":"ok","is_error":true}""" },
         { new ApprovalRequest("r1", "c1", "Bash", JsonNode.Parse("""{"command":"ls"}"""), "run ls"), "approval_request", """{"v":1,"approval_id":"r1","call_id":"c1","name":"Bash","arguments":{"command":"ls"},"description":"run ls"}""" },
         { new InjectionDetected("c1", "Read", ["role-override", "exfil"], "ignore previous", "/log/1"), "injection_detected", """{"v":1,"call_id":"c1","tool_name":"Read","rules":["role-override","exfil"],"excerpt":"ignore previous","details_url":"/log/1"}""" },
+        { new InjectionDetected("c2", "Read", ["exfil"], "e", IsLocal: true), "injection_detected", """{"v":1,"call_id":"c2","tool_name":"Read","rules":["exfil"],"excerpt":"e","details_url":"","local":true}""" },
         { new ActionBlocked("r1", "c1", "Bash", JsonNode.Parse("""{"command":"rm"}"""), "tainted turn", "/log/2"), "action_blocked", """{"v":1,"call_id":"c1","name":"Bash","reason":"tainted turn","details_url":"/log/2"}""" },
         { new InputAccepted("more"), "input_accepted", """{"v":1}""" },
         { new ModeChanged("plan"), "permission_mode", """{"v":1,"mode":"plan"}""" },
