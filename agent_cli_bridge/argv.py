@@ -82,44 +82,9 @@ def permission_args(flavor: str, permission_mode: str | None) -> list[str]:
             return ["--trust"]  # workspace trust only; no --force
         return ["--trust", "--force"]
     if flavor == "grok":
-        # `--permission-mode plan` is only "accepted for compatibility": Grok still edits
-        # files and runs commands. And a headless Grok cancels its whole turn when a tool
-        # needs an approval nobody can give. So restrict tools instead (verified live
-        # 2026-09-14): Plan/Ask keep read-only built-ins; the edit modes allow edits but
-        # deny the shell, MCP tools and subagents, which the agent sees as a refusal and
-        # works around, rather than as a prompt that ends the turn.
-        if mode in ("plan", "manual"):
-            return ["--tools", GROK_READ_ONLY_TOOLS, "--disallowed-tools", "Agent", "--deny", "MCPTool"]
-        if mode == "bypassPermissions":
-            return ["--permission-mode", mode]
-        if mode == "auto":
-            # Grok's own `auto` still asks for some calls (an edit, a command it will not
-            # just block). A headless run cannot answer, and grok 1.0.52 then cancels the
-            # whole turn (stop_reason "cancelled", cancellationCategory PermissionCancelled)
-            # instead of telling the model "Auto mode blocked …" and carrying on.
-            # `--always-approve` is the mode grok documents for a headless agent: tools run,
-            # and deny rules plus shell ask rules still apply.
-            return ["--always-approve"]
-        # Accept edits / dontAsk / default. grok 1.0.77 `--permission-mode acceptEdits` still
-        # asks before every `search_replace` headless, and the turn is cancelled (verified live
-        # 2026-11-10). So keep only read and edit tools, and approve those.
-        return [
-            "--tools", GROK_EDIT_TOOLS,
-            "--disallowed-tools", "Agent", "--deny", "Bash", "--deny", "MCPTool",
-            "--always-approve",
-        ]
-
+        return _grok_permission_args(mode)
     if flavor == "opencode":
-        # `opencode run` rejects any tool call that would ask for approval, and the
-        # turn then ends without an answer. Plan/Ask use its built-in `plan` agent
-        # (edits denied, verified live 2026-09-17); the default `build` agent asks
-        # nothing inside the project directory; Bypass also approves the rest
-        # (paths outside it).
-        if mode in ("plan", "manual"):
-            return ["--agent", "plan"]
-        if mode == "bypassPermissions":
-            return ["--auto"]
-        return []
+        return _opencode_permission_args(mode)
     if flavor == "gemini":
         if mode in ("plan", "manual"):
             return ["--approval-mode", "plan"]
@@ -136,6 +101,48 @@ def permission_args(flavor: str, permission_mode: str | None) -> list[str]:
         if mode == "plan":
             return ["--mode", "plan"]
         return ["--mode", "accept-edits"]
+    return []
+
+
+def _grok_permission_args(mode: str) -> list[str]:
+    # `--permission-mode plan` is only "accepted for compatibility": Grok still edits
+    # files and runs commands. And a headless Grok cancels its whole turn when a tool
+    # needs an approval nobody can give. So restrict tools instead (verified live
+    # 2026-09-14): Plan/Ask keep read-only built-ins; the edit modes allow edits but
+    # deny the shell, MCP tools and subagents, which the agent sees as a refusal and
+    # works around, rather than as a prompt that ends the turn.
+    if mode in ("plan", "manual"):
+        return ["--tools", GROK_READ_ONLY_TOOLS, "--disallowed-tools", "Agent", "--deny", "MCPTool"]
+    if mode == "bypassPermissions":
+        return ["--permission-mode", mode]
+    if mode == "auto":
+        # Grok's own `auto` still asks for some calls (an edit, a command it will not
+        # just block). A headless run cannot answer, and grok 1.0.52 then cancels the
+        # whole turn (stop_reason "cancelled", cancellationCategory PermissionCancelled)
+        # instead of telling the model "Auto mode blocked …" and carrying on.
+        # `--always-approve` is the mode grok documents for a headless agent: tools run,
+        # and deny rules plus shell ask rules still apply.
+        return ["--always-approve"]
+    # Accept edits / dontAsk / default. grok 1.0.77 `--permission-mode acceptEdits` still
+    # asks before every `search_replace` headless, and the turn is cancelled (verified live
+    # 2026-11-10). So keep only read and edit tools, and approve those.
+    return [
+        "--tools", GROK_EDIT_TOOLS,
+        "--disallowed-tools", "Agent", "--deny", "Bash", "--deny", "MCPTool",
+        "--always-approve",
+    ]
+
+
+def _opencode_permission_args(mode: str) -> list[str]:
+    # `opencode run` rejects any tool call that would ask for approval, and the
+    # turn then ends without an answer. Plan/Ask use its built-in `plan` agent
+    # (edits denied, verified live 2026-09-17); the default `build` agent asks
+    # nothing inside the project directory; Bypass also approves the rest
+    # (paths outside it).
+    if mode in ("plan", "manual"):
+        return ["--agent", "plan"]
+    if mode == "bypassPermissions":
+        return ["--auto"]
     return []
 
 
