@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using D3sk.AgentCli.Catalog;
 using D3sk.AgentCli.Specs.OpenCode;
 
 namespace D3sk.AgentCli.Tests.Specs.OpenCode;
@@ -73,8 +74,8 @@ public class OpenCodeArgvTests
     {
         Assert.Equal("opencode", OpenCodeSpec.Command);
         Assert.Equal("opencode", OpenCodeSpec.Flavor);
-        Assert.Equal("openrouter/stealth/crouton-alpha", OpenCodeSpec.Models[0]);
-        Assert.Equal(22, OpenCodeSpec.Models.Count);
+        Assert.Equal("openrouter/nvidia/nemotron-3-ultra-550b-a55b:free", OpenCodeSpec.Models[0]);
+        Assert.All(OpenCodeSpec.Models, m => Assert.True(ModelListParser.IsOpenRouterFree(m), m));
     }
 
     [Fact]

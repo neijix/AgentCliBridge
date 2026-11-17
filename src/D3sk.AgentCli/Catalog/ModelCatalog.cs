@@ -7,7 +7,7 @@ namespace D3sk.AgentCli.Catalog;
 /// <summary>One agent CLI as the catalog needs it.</summary>
 /// <param name="Command">The CLI's command name (the cache key).</param>
 /// <param name="Flavor">Its flavor: claude, cursor, grok, antigravity, opencode, ...</param>
-/// <param name="Models">The curated list (specs, or the host's configured models).</param>
+/// <param name="Models">The curated list (specs, or the host's configured models): what a CLI that cannot list offers, and the order of what one that can lists.</param>
 /// <param name="BinaryFound">Whether the binary is installed.</param>
 /// <param name="Path">The binary's full path, when known.</param>
 /// <param name="Name">The display name (ranking falls back to <paramref name="Command"/>).</param>
@@ -23,7 +23,7 @@ public sealed record CatalogAgent(
     string? AccountKind = null,
     bool HasPrices = false);
 
-/// <summary>One agent's merged list: curated plus what the CLI offers now. Ranking is not part of it.</summary>
+/// <summary>One agent's merged list: what the CLI offers now (or last time), else its curated list when it cannot list. Ranking is not part of it.</summary>
 /// <param name="Models">What to show, optional ones last.</param>
 /// <param name="NewModels">Models the CLI lists and nobody has seen yet.</param>
 /// <param name="OptionalModels">Models out of the picker until ticked in Settings; null when none.</param>
@@ -38,10 +38,12 @@ public sealed record MergedModels(
 
 /// <summary>
 /// Which models each agent CLI offers right now. The CLIs that can list (<c>agy models</c>,
-/// <c>grok models</c>, <c>cursor-agent models</c>, <c>opencode models</c>) are asked and their answer
-/// merged into the curated list: a listed model the curated list lacks is added and flagged new, a
-/// curated model the CLI no longer lists is dropped. A CLI that cannot list, or that fails, keeps the
-/// curated list. Claude Code through a company gateway offers what that gateway lists.
+/// <c>grok models</c>, <c>cursor-agent models</c>, <c>opencode models</c>, <c>gemini models</c>,
+/// <c>copilot help config</c>) are asked, and only what they list is offered: the curated list only
+/// orders it, a listed model the curated list lacks is added and flagged new, a curated model the CLI
+/// does not list is dropped. A CLI that fails (offline, signed out) offers the last list it gave, kept
+/// on disk; one that never gave a list offers nothing. Claude Code, which cannot list, keeps its
+/// curated aliases, or offers what its company gateway lists.
 /// Results are cached per CLI (an hour; a failure five minutes; a gateway not up yet one minute).
 /// </summary>
 public sealed class ModelCatalog
@@ -64,9 +66,12 @@ public sealed class ModelCatalog
         ["grok"] = ["models"],
         ["cursor"] = ["models"],
         ["opencode"] = ["models", "--verbose"],
+        ["gemini"] = ["models", "-o", "json"],
+        ["copilot"] = ["help", "config"],
     };
 
     private readonly string _knownPath;
+    private readonly LastReads _lastReads;
     private readonly Func<IReadOnlyList<string>, string> _run;
     private readonly Func<string, IReadOnlyDictionary<string, string>, JsonNode?> _fetch;
     private readonly Func<double> _clock;
@@ -89,6 +94,7 @@ public sealed class ModelCatalog
         Func<double>? clock = null)
     {
         _knownPath = knownPath;
+        _lastReads = new LastReads(LastReads.PathFor(knownPath));
         _run = run ?? CatalogIo.RunList;
         _fetch = fetch is null ? (url, headers) => CatalogIo.FetchJson(url, headers) : (url, _) => fetch(url);
         _clock = clock ?? (() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0);
@@ -109,6 +115,7 @@ public sealed class ModelCatalog
         Func<double>? clock = null)
     {
         _knownPath = knownPath;
+        _lastReads = new LastReads(LastReads.PathFor(knownPath));
         _run = run ?? CatalogIo.RunList;
         _fetch = fetch;
         _clock = clock ?? (() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0);
@@ -145,6 +152,7 @@ public sealed class ModelCatalog
             {
                 continue;
             }
+            Seed(agent.Command);
             _listed.TryGetValue(agent.Command, out var cached);
             if (cached.ExpiresAt > _clock() && !force && _listed.ContainsKey(agent.Command))
             {
@@ -155,13 +163,20 @@ public sealed class ModelCatalog
             List<string> listed;
             try
             {
-                if (args.Contains("--verbose"))
+                switch (agent.Flavor)
                 {
-                    (listed, prices) = ModelListParser.ReadOpenCodeCatalog(_run, binary);
-                }
-                else
-                {
-                    listed = ModelListParser.ParseModels(_run([binary, .. args]));
+                    case "opencode":
+                        (listed, prices) = ModelListParser.ReadOpenCodeCatalog(_run, binary);
+                        break;
+                    case "gemini":
+                        listed = ListGemini(binary, args);
+                        break;
+                    case "copilot":
+                        listed = ModelListParser.ParseCopilotModels(_run([binary, .. args]));
+                        break;
+                    default:
+                        listed = ModelListParser.ParseModels(_run([binary, .. args]));
+                        break;
                 }
                 if (listed.Count == 0)
                 {
@@ -175,8 +190,46 @@ public sealed class ModelCatalog
             }
             _listed[agent.Command] = (listed, _clock() + ListTtl);
             _prices[agent.Command] = prices;
-            RememberBaseline(agent.Command, ModelListParser.Offered(agent.Flavor, listed, prices));
+            _lastReads.Save(agent.Command, listed, prices);
+            var offered = ModelListParser.Offered(agent.Flavor, listed);
+            if (offered.Count > 0)
+            {
+                // OpenCode without an Open Router key offers nothing yet: its first real offer is the baseline.
+                RememberBaseline(agent.Command, offered);
+            }
         }
+    }
+
+    /// <summary>The Gemini CLI that lists its models (<c>gemini models</c>, 0.68).</summary>
+    public static readonly Version GeminiListsFrom = new(0, 68);
+
+    /// <summary>
+    /// <c>gemini models -o json</c>, once <c>gemini --version</c> says it knows that command: an older
+    /// CLI takes "models" as a prompt and would spend a model turn on every read.
+    /// </summary>
+    private List<string> ListGemini(string binary, string[] args)
+    {
+        var key = Status.ReleaseSources.VersionKey(Status.ReleaseSources.ParseVersion(_run([binary, "--version"])));
+        if (key.Count < 2 || key[0] > int.MaxValue || key[1] > int.MaxValue
+            || new Version((int)key[0], (int)key[1]) < GeminiListsFrom)
+        {
+            throw new InvalidOperationException($"this Gemini CLI cannot list its models (needs {GeminiListsFrom} or later)");
+        }
+        return ModelListParser.ParseGeminiModels(_run([binary, .. args]));
+    }
+
+    /// <summary>Whether <paramref name="flavor"/>'s CLI lists its own models (its list is the only one offered).</summary>
+    public static bool CanList(string flavor) => ListArgs.ContainsKey(flavor);
+
+    /// <summary>Starts from the list the CLI gave last time, already expired so the CLI is asked again.</summary>
+    private void Seed(string command)
+    {
+        if (_listed.ContainsKey(command) || !_lastReads.TryGet(command, out var ids, out var prices))
+        {
+            return;
+        }
+        _listed[command] = (ids, 0);
+        _prices[command] = prices;
     }
 
     private void RefreshGateway(string command, string? baseUrl, IReadOnlyDictionary<string, string>? headers, bool force)
@@ -291,14 +344,19 @@ public sealed class ModelCatalog
         }
     }
 
-    /// <summary>The merged list for one agent: curated plus listed, and which of them are new.</summary>
+    /// <summary>The merged list for one agent: what its CLI lists, curated ones first, and which of them are new.</summary>
     public MergedModels Merge(CatalogAgent agent)
     {
         var curated = agent.Models.ToList();
+        if (CanList(agent.Flavor) && agent.BinaryFound)
+        {
+            Seed(agent.Command);
+        }
         var listed = _listed.TryGetValue(agent.Command, out var cached) ? cached.Ids : null;
         if (listed is null || listed.Count == 0)
         {
-            return new MergedModels(curated, []);
+            // A CLI that can list but never did (not signed in, offline since install) offers nothing.
+            return new MergedModels(CanList(agent.Flavor) ? [] : curated, []);
         }
         if (_gateways.ContainsKey(agent.Command))
         {
@@ -306,18 +364,14 @@ public sealed class ModelCatalog
         }
         var prices = _prices.GetValueOrDefault(agent.Command) ?? [];
         var everything = new HashSet<string>(listed, StringComparer.Ordinal);
-        var kept = curated.Where(m => ModelListParser.IsListed(agent.Flavor, m, everything)).ToList();
+        var free = ModelListParser.Offered(agent.Flavor, listed);
+        var offeredNow = new HashSet<string>(free, StringComparer.Ordinal);
+        var kept = curated.Where(m => IsKept(agent.Flavor, m, everything)).ToList();
         var keptSet = new HashSet<string>(kept, StringComparer.Ordinal);
         var baseline = new HashSet<string>(LoadKnown().GetValueOrDefault(agent.Command) ?? [], StringComparer.Ordinal);
-        var free = ModelListParser.Offered(agent.Flavor, listed, prices);
         var added = free.Where(m => !keptSet.Contains(m) && !baseline.Contains(m)).ToList();
         var models = kept.Concat(added).ToList();
-        if (models.Count == 0)
-        {
-            models = curated;
-        }
         var chosen = new HashSet<string>(models, StringComparer.Ordinal);
-        var offeredNow = new HashSet<string>(free, StringComparer.Ordinal);
         // The baseline is not announced, but each of its models can still be ticked in Settings.
         var optional = listed.Where(m => !chosen.Contains(m) && (baseline.Contains(m) || !offeredNow.Contains(m))).ToList();
         if (optional.Count > 0)
@@ -333,6 +387,11 @@ public sealed class ModelCatalog
         }
         return new MergedModels(models, added, optionalOut, pricesOut);
     }
+
+    /// <summary>A curated id the CLI lists, unless the CLI does not offer it (a Zen or paid id under Open Router).</summary>
+    private static bool IsKept(string flavor, string model, HashSet<string> listed) =>
+        ModelListParser.IsListed(flavor, model, listed)
+        && (ModelListParser.KeepAlways.Contains(model) || ModelListParser.Offered(flavor, [model]).Count > 0);
 
     private MergedModels MergeGateway(string command, List<string> curated, List<string> listed)
     {

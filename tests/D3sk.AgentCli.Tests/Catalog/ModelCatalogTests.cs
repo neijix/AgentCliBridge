@@ -34,14 +34,15 @@ public sealed class ModelCatalogTests : IDisposable
     }
 
     [Fact]
-    public void Opencode_offers_only_free_and_zen_models_and_grok_efforts_count_as_listed()
+    public void Opencode_offers_only_open_router_free_models_and_grok_efforts_count_as_listed()
     {
         string[] listed =
         [
             "openrouter/openai/gpt-6", "openrouter/z-ai/glm-5.2:free", "openrouter/muse-spark-1.3-contributor-free",
             "openrouter/stealth/space-bunny-alpha", "opencode/big-pickle",
         ];
-        Assert.Equal(listed[1..], ModelListParser.Offered("opencode", listed));
+        Assert.Equal(listed[1..4], ModelListParser.Offered("opencode", listed));
+        Assert.False(ModelListParser.IsOpenRouterFree("opencode/glm-5.3-flash-free"));
         Assert.Equal(listed, ModelListParser.Offered("grok", listed));
         Assert.True(ModelListParser.IsOpenRouterPromo("openrouter/google/gemma-4-31b-it:free"));
         Assert.False(ModelListParser.IsOpenRouterPromo("opencode/big-pickle"));
@@ -95,19 +96,126 @@ public sealed class ModelCatalogTests : IDisposable
     }
 
     [Fact]
-    public void A_cli_that_fails_keeps_the_curated_list_and_is_retried_later()
+    public void A_cli_that_never_listed_offers_nothing_and_is_retried_later()
     {
         var calls = 0;
         var grok = Agent("grok", "grok", "grok-4.6");
         var catalog = Catalog(_ => { calls++; throw new IOException("not signed in"); });
+        Assert.Empty(catalog.Merge(grok).Models);
         catalog.Refresh([grok]);
         catalog.Refresh([grok]);
         Assert.Equal(1, calls);
-        Assert.Equal(["grok-4.6"], catalog.Merge(grok).Models);
+        Assert.Empty(catalog.Merge(grok).Models);
         _now += 6 * 60;
         catalog.Refresh([grok]);
         Assert.Equal(2, calls);
     }
+
+    [Fact]
+    public void A_cli_that_fails_after_a_restart_offers_the_last_list_it_gave()
+    {
+        var grok = Agent("grok", "grok", "grok-4.6");
+        Catalog(_ => GrokOutput).Refresh([grok]);
+
+        var calls = 0;
+        var offline = Catalog(_ => { calls++; throw new IOException("offline"); });
+        Assert.Equal(["grok-4.6", "grok-4.7", "grok-4.7-build-fast", "grok-4.5"], offline.Merge(grok).Models);
+        offline.Refresh([grok]);
+        Assert.Equal(1, calls);
+        Assert.Equal(["grok-4.6", "grok-4.7", "grok-4.7-build-fast", "grok-4.5"], offline.Merge(grok).Models);
+
+        Assert.Empty(Catalog(_ => throw new IOException("offline")).Merge(grok with { BinaryFound = false }).Models);
+
+        File.WriteAllText(Path.Combine(_dir, "known.listed.json"), "{not json");
+        Assert.Empty(Catalog(_ => throw new IOException("offline")).Merge(grok).Models);
+    }
+
+    [Fact]
+    public void Gemini_and_copilot_list_their_models_and_claude_keeps_its_aliases()
+    {
+        Assert.Equal(["auto", "gemini-2.5-pro", "gemini-3.5-flash"], ModelListParser.ParseGeminiModels(GeminiJson));
+        Assert.Equal(["claude-sonnet-5.5", "claude-fable-5.2", "gpt-6.1-sol", "kimi-k3"], ModelListParser.ParseCopilotModels(CopilotHelpConfig));
+        Assert.Empty(ModelListParser.ParseCopilotModels("`logLevel`: level\n    - \"debug\"\n"));
+
+        var calls = new List<string>();
+        var geminiVersion = "0.68.2";
+        string Run(IReadOnlyList<string> argv)
+        {
+            calls.Add(string.Join(' ', argv));
+            if (argv[0] != "/bin/gemini")
+            {
+                return CopilotHelpConfig;
+            }
+            return argv[1] == "--version" ? geminiVersion : GeminiJson;
+        }
+
+        var gemini = Agent("gemini", "gemini", "gemini-3.5-flash", "gemini-3.1-pro-preview");
+        var copilot = Agent("copilot", "copilot", "auto", "gpt-6.1-sol");
+        var claude = Agent("claude", "claude", "sonnet", "opus");
+
+        // Before 0.68 "models" is a prompt: the CLI is never asked, and nothing is offered.
+        geminiVersion = "0.67.9";
+        var old = new ModelCatalog(Path.Combine(_dir, "old", "known.json"), Run, null, () => _now);
+        old.Refresh([gemini]);
+        Assert.Equal(["/bin/gemini --version"], calls);
+        Assert.Empty(old.Merge(gemini).Models);
+
+        calls.Clear();
+        geminiVersion = "0.68.2";
+        var catalog = Catalog(Run);
+        catalog.Refresh([gemini, copilot, claude]);
+        Assert.Equal(["/bin/gemini --version", "/bin/gemini models -o json", "/bin/copilot help config"], calls);
+        Assert.Equal(["gemini-3.5-flash", "auto", "gemini-2.5-pro"], catalog.Merge(gemini).Models);
+        Assert.Equal(["auto", "gpt-6.1-sol", "claude-sonnet-5.5", "claude-fable-5.2", "kimi-k3"], catalog.Merge(copilot).Models);
+        Assert.Equal(["sonnet", "opus"], catalog.Merge(claude).Models);
+    }
+
+    [Fact]
+    public void Opencode_without_an_open_router_key_offers_no_model_in_the_picker()
+    {
+        const string zenOnly = "opencode/big-pickle\nopencode/glm-5.3-flash-free\nopencode/beam-free\n";
+        var opencode = Agent("opencode", "opencode", "openrouter/google/gemma-4-31b-it:free");
+        var catalog = Catalog(argv => argv.Contains("--verbose") ? throw new InvalidOperationException("exit 1") : zenOnly);
+        catalog.Refresh([opencode]);
+        var merged = catalog.Merge(opencode);
+        Assert.Empty(merged.NewModels);
+        Assert.Equal(["opencode/big-pickle", "opencode/glm-5.3-flash-free", "opencode/beam-free"], merged.OptionalModels);
+        Assert.Equal(merged.OptionalModels, merged.Models);
+
+        // The key comes later: its long free list is the baseline, not a wall of new models.
+        var free = Enumerable.Range(0, ModelCatalog.Reviewable + 5).Select(n => $"openrouter/vendor/model-{n}:free");
+        var keyed = Catalog(_ => string.Join('\n', free));
+        keyed.Refresh([opencode]);
+        Assert.Empty(keyed.Merge(opencode).NewModels);
+    }
+
+    private const string GeminiJson = """
+        Warning: [experimental] a notice before the list
+        [
+          {"modelId": "auto", "id": "auto", "name": "Auto", "displayName": "Auto",
+           "contextLimits": {"inputTokens": 1048576, "outputTokens": 8192}},
+          {"modelId": "gemini-2.5-pro", "id": "gemini-2.5-pro", "name": "gemini-2.5-pro"},
+          {"modelId": "gemini-3.5-flash", "id": "gemini-3.5-flash"},
+          {"id": "--yolo"},
+          {"id": 42},
+          "not an entry"
+        ]
+        """;
+
+    private const string CopilotHelpConfig = """
+          `logLevel`: logging level.
+            - "debug"
+
+          `model`: AI model to use for Copilot CLI, including custom and local models; can be changed with /model command or --model flag option. Refer to `copilot help providers`.
+            - "claude-sonnet-5.5"
+            - "claude-fable-5.2"
+            - "gpt-6.1-sol"
+            - "--not-a-model"
+            - "kimi-k3"
+
+          `contextTier`: context window tier for tiered-pricing models (e.g., "default" or "long_context").
+            - When unset, a model starts on the tier its catalog entry prefers
+        """;
 
     [Fact]
     public void An_answer_is_cached_until_the_cli_is_updated()
@@ -158,7 +266,7 @@ public sealed class ModelCatalogTests : IDisposable
         Assert.Equal(["opencode/big-pickle", "openrouter/meta/muse-spark-1.3", "openrouter/qwen/qwen3.8-27b:free", "openrouter/openrouter/auto"], ids);
         Assert.Equal([1.25, 4.25], prices["openrouter/meta/muse-spark-1.3"]);
         // A router's price of 0 does not make it free: it bills the model it picks.
-        Assert.Equal(["opencode/big-pickle", "openrouter/qwen/qwen3.8-27b:free"], ModelListParser.Offered("opencode", ids, prices));
+        Assert.Equal(["openrouter/qwen/qwen3.8-27b:free"], ModelListParser.Offered("opencode", ids));
 
         var calls = new List<string>();
         var opencode = Agent("opencode", "opencode", "opencode/big-pickle");
@@ -166,9 +274,10 @@ public sealed class ModelCatalogTests : IDisposable
         catalog.Refresh([opencode]);
         Assert.Equal(["/bin/opencode models --verbose"], calls);
         var merged = catalog.Merge(opencode);
-        Assert.Equal(["opencode/big-pickle", "openrouter/qwen/qwen3.8-27b:free", "openrouter/meta/muse-spark-1.3", "openrouter/openrouter/auto"], merged.Models);
+        // A curated Zen id is listed but not an Open Router free model: optional, not in the picker.
+        Assert.Equal(["openrouter/qwen/qwen3.8-27b:free", "opencode/big-pickle", "openrouter/meta/muse-spark-1.3", "openrouter/openrouter/auto"], merged.Models);
         Assert.Equal(["openrouter/qwen/qwen3.8-27b:free"], merged.NewModels);
-        Assert.Equal(["openrouter/meta/muse-spark-1.3", "openrouter/openrouter/auto"], merged.OptionalModels);
+        Assert.Equal(["opencode/big-pickle", "openrouter/meta/muse-spark-1.3", "openrouter/openrouter/auto"], merged.OptionalModels);
         Assert.Equal([0.0, 0.0], merged.Prices!["opencode/big-pickle"]);
         Assert.DoesNotContain("openrouter/google/lyria-3-pro", merged.Prices.Keys);
     }
@@ -195,9 +304,8 @@ public sealed class ModelCatalogTests : IDisposable
         catalog.Refresh([opencode]);
         var merged = catalog.Merge(opencode);
         Assert.DoesNotContain("openrouter/stealth/union-alpha", merged.Models);
-        Assert.Contains("opencode/muse-spark-1.3-contributor-free", merged.NewModels);
-        Assert.Contains("openrouter/stealth/space-bunny-alpha", merged.NewModels);
-        Assert.Equal(["openrouter/openai/gpt-6"], merged.OptionalModels);
+        Assert.Equal(["openrouter/qwen/qwen3.8-27b:free", "openrouter/stealth/space-bunny-alpha"], merged.NewModels);
+        Assert.Equal(["opencode/big-pickle", "opencode/muse-spark-1.3-contributor-free", "openrouter/openai/gpt-6"], merged.OptionalModels);
         Assert.Null(merged.Prices);
     }
 

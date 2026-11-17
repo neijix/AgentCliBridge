@@ -19,7 +19,9 @@ public static class GeminiSpec
     /// <summary>Names resolved on the PATH.</summary>
     public static IReadOnlyList<string> Aliases { get; } = ["gemini"];
 
-    /// <summary>Curated model ids, as the CLI's own <c>--help</c> names them; the first is the default.</summary>
+    /// <summary>
+    /// Preferred order of the models <c>gemini models -o json</c> lists; only what it lists is offered.
+    /// </summary>
     public static IReadOnlyList<string> Models { get; } =
-        ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"];
+        ["auto", "gemini-2.5-pro", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
 }

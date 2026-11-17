@@ -20,33 +20,25 @@ public static class OpenCodeSpec
     public static IReadOnlyList<string> Aliases { get; } = ["opencode"];
 
     /// <summary>
-    /// Curated <c>provider/model</c> ids (verified 2026-11-04 against OpenRouter's catalog and
-    /// <c>opencode models</c>), passed verbatim to <c>--model</c>; the first is the default. Free and
-    /// stealth models come and go. <c>opencode/*</c> needs no OpenRouter key.
+    /// Preferred order of Open Router's free models (its catalog on 2026-11-16), passed verbatim to
+    /// <c>--model</c>. Only what <c>opencode models</c> lists is offered (it lists Open Router models
+    /// once a key is stored); an id here it does not list is not shown. Free models come and go.
     /// </summary>
     public static IReadOnlyList<string> Models { get; } =
     [
-        "openrouter/stealth/crouton-alpha",
         "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
-        "openrouter/google/gemma-4-31b-it:free",
-        "openrouter/google/gemma-4-26b-a4b-it:free",
+        "openrouter/thinkingmachines/inkling-2-small:free",
+        "openrouter/inclusionai/ling-3.2-flash:free",
+        "openrouter/particle-ai/particle-1:free",
+        "openrouter/baidu/ernie-5.5-flash-preview:free",
         "openrouter/nvidia/nemotron-3.5-super-vl:free",
         "openrouter/nvidia/nemotron-3.5-lightning:free",
-        "openrouter/cohere/north-mini-code:free",
-        "openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-        "openrouter/recursive/flint-v1.0:free",
-        "openrouter/xingchen-agi/xing4.0-29b-a4b:free",
         "openrouter/dots-studio/dots-3-note-preview:free",
-        "openrouter/liquid/lfm-2.5-2.6b:free",
-        "opencode/big-pickle",
-        "opencode/beam-free",
-        "opencode/crouton-alpha-free",
-        "opencode/deepseek-v4.1-flash-free",
-        "opencode/flint-40b-free",
-        "opencode/glm-5.3-flash-free",
-        "opencode/mimo-v2.6-flash-free",
-        "opencode/nemotron-3.5-lightning-free",
-        "opencode/nemotron-3.5-super-vl-free",
-        "opencode/pulse-alpha-free",
+        "openrouter/google/gemma-4-31b-it:free",
+        "openrouter/google/gemma-4-26b-a4b-it:free",
+        "openrouter/cohere/north-mini-code:free",
+        "openrouter/recursive/flint-v1.0:free",
+        "openrouter/liquid/lfm-3-1.7b:free",
+        "openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
     ];
 }

@@ -161,9 +161,21 @@ public static partial class ModelListParser
     }
 
     /// <summary>
-    /// A free OpenCode model: an Open Router promo id, or an OpenCode Zen model at no cost. A price
-    /// of zero alone is not enough: Open Router's routers report 0 because they bill whatever model they pick.
+    /// What of a CLI's full list is offered as usual. The Open Router agent offers Open Router's free
+    /// models only: its paid models and OpenCode Zen's own (<c>opencode/*</c>, no Open Router key
+    /// needed) stay out of the picker, so it shows what Open Router lists as free, and nothing until
+    /// an Open Router key lets OpenCode list them.
     /// </summary>
+    public static List<string> Offered(string flavor, IReadOnlyList<string> listed) =>
+        flavor != "opencode" ? listed.ToList() : listed.Where(IsOpenRouterFree).ToList();
+
+    /// <summary>As <see cref="Offered(string, IReadOnlyList{string})"/>; prices no longer change what is offered.</summary>
+    [Obsolete("Prices no longer change what is offered: call Offered(flavor, listed).")]
+    public static List<string> Offered(string flavor, IReadOnlyList<string> listed, IReadOnlyDictionary<string, double[]>? prices) =>
+        Offered(flavor, listed);
+
+    /// <summary>A free OpenCode model: an Open Router promo id, or an OpenCode Zen model at no cost.</summary>
+    [Obsolete("The Open Router picker offers Open Router's free ids only: use IsOpenRouterFree.")]
     public static bool IsFree(string model, IReadOnlyDictionary<string, double[]>? prices = null)
     {
         if (IsOpenRouterPromo(model))
@@ -177,9 +189,75 @@ public static partial class ModelListParser
         return prices is null || !prices.TryGetValue(model, out var price) || !price.Any(p => p != 0);
     }
 
-    /// <summary>What of a CLI's full list is offered as usual: OpenCode keeps its free models only.</summary>
-    public static List<string> Offered(string flavor, IReadOnlyList<string> listed, IReadOnlyDictionary<string, double[]>? prices = null) =>
-        flavor != "opencode" ? listed.ToList() : listed.Where(m => IsFree(m, prices)).ToList();
+    /// <summary>An <c>openrouter/</c> id that is free for a limited time.</summary>
+    public static bool IsOpenRouterFree(string model) =>
+        model.StartsWith("openrouter/", StringComparison.Ordinal) && IsOpenRouterPromo(model);
+
+    /// <summary>
+    /// Ids in <c>gemini models -o json</c>: an array of objects with an <c>id</c>. Lines before the
+    /// array (a warning, even one with a bracket) are skipped; anything that is not an id is left out.
+    /// </summary>
+    public static List<string> ParseGeminiModels(string? text)
+    {
+        var raw = AnsiRx().Replace(text ?? "", "");
+        JsonArray? array = null;
+        for (var start = 0; start < raw.Length && array is null; start = raw.IndexOf('\n', start) is var nl and >= 0 ? nl + 1 : raw.Length)
+        {
+            var line = raw[start..].TrimStart(' ', '\t');
+            if (line.StartsWith('['))
+            {
+                array = FirstJson(line) as JsonArray;
+            }
+        }
+        if (array is null)
+        {
+            return [];
+        }
+        var ids = new List<string>();
+        foreach (var entry in array)
+        {
+            if (entry is JsonObject obj && obj["id"] is JsonValue value && value.GetValueKind() == JsonValueKind.String
+                && value.GetValue<string>() is var id && IdRx().IsMatch(id) && !ids.Contains(id))
+            {
+                ids.Add(id);
+            }
+        }
+        return ids.Take(MaxModels).ToList();
+    }
+
+    /// <summary>
+    /// Ids in <c>copilot help config</c>: the quoted choices listed under its <c>`model`</c> setting,
+    /// which are the models the CLI's own <c>/model</c> offers in that version.
+    /// </summary>
+    public static List<string> ParseCopilotModels(string? text)
+    {
+        var ids = new List<string>();
+        var inModel = false;
+        foreach (var raw in Lines(text))
+        {
+            var line = raw.TrimEnd('\r');
+            if (!inModel)
+            {
+                inModel = line.TrimStart().StartsWith("`model`:", StringComparison.Ordinal);
+                continue;
+            }
+            var item = line.Trim();
+            if (!item.StartsWith("- \"", StringComparison.Ordinal))
+            {
+                if (ids.Count > 0 || item.Length > 0 && !item.StartsWith('-'))
+                {
+                    break;
+                }
+                continue;
+            }
+            var id = item[3..].TrimEnd('"');
+            if (IdRx().IsMatch(id) && !ids.Contains(id))
+            {
+                ids.Add(id);
+            }
+        }
+        return ids.Take(MaxModels).ToList();
+    }
 
     /// <summary>Whether a curated id is still among the CLI's models (Grok's <c>-high</c>/<c>-low</c> are efforts).</summary>
     public static bool IsListed(string flavor, string model, IReadOnlySet<string> listed)

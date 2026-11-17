@@ -20,9 +20,9 @@ public static class CopilotSpec
     public static IReadOnlyList<string> Aliases { get; } = ["copilot"];
 
     /// <summary>
-    /// Curated model ids passed verbatim to <c>--model</c>; the first is the default. "auto" lets Copilot
-    /// pick (documented in its <c>--help</c>); claude-sonnet-5 is the observed default; gpt-5-mini is an
-    /// included (non-premium) model.
+    /// Preferred order of the models <c>copilot help config</c> lists under <c>model</c>, passed verbatim
+    /// to <c>--model</c>; only what it lists is offered, and "auto" (Copilot picks, documented in its
+    /// <c>--help</c>) always.
     /// </summary>
-    public static IReadOnlyList<string> Models { get; } = ["auto", "claude-sonnet-5", "gpt-5-mini"];
+    public static IReadOnlyList<string> Models { get; } = ["auto", "claude-sonnet-5.5", "gpt-6.1-sol"];
 }

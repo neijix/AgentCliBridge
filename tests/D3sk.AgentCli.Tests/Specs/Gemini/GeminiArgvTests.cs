@@ -59,6 +59,6 @@ public class GeminiArgvTests
     public void Spec_names_the_cli()
     {
         Assert.Equal("gemini", GeminiSpec.Command);
-        Assert.Equal("gemini-3.1-pro-preview", GeminiSpec.Models[0]);
+        Assert.Equal("auto", GeminiSpec.Models[0]);
     }
 }
