@@ -48,40 +48,51 @@ public static class MlxChat
         var chosen = model.Length > 0 ? model : available.FirstOrDefault() ?? "";
         if (!available.Contains(chosen))
         {
-            yield return new StreamError($"{(chosen.Length > 0 ? MlxModels.Short(chosen) : "That model")} is not downloaded on this computer.", Code);
-            yield return new Completed(1);
+            foreach (var failed in Failed($"{(chosen.Length > 0 ? MlxModels.Short(chosen) : "That model")} is not downloaded on this computer.", Code))
+            {
+                yield return failed;
+            }
             yield break;
         }
 
         using var link = await MlxLink.ConnectAsync(options, cancellationToken).ConfigureAwait(false);
         if (!link.State.IsReady)
         {
-            yield return new StreamError(link.State.Detail, CodeOf(link.State));
-            yield return new Completed(1);
+            foreach (var failed in Failed(link.State.Detail, CodeOf(link.State)))
+            {
+                yield return failed;
+            }
             yield break;
         }
 
         var system = MlxModels.SystemText(cwd, projectName, options.ReplyRules);
-        await using var replies = ReplyAsync(link, chosen, prompt, system, options, cancellationToken).GetAsyncEnumerator(cancellationToken);
+        var replies = ReplyAsync(link, chosen, prompt, system, options, cancellationToken);
+        await foreach (var item in RelayAsync(replies, chosen, options, cancellationToken).ConfigureAwait(false))
+        {
+            yield return item;
+        }
+    }
+
+    private static StreamEvent[] Failed(string message, string code) => [new StreamError(message, code), new Completed(1)];
+
+    /// <summary>Turns the model's reply pieces into stream events, with the loading notice when the first piece is late.</summary>
+    private static async IAsyncEnumerable<StreamEvent> RelayAsync(
+        IAsyncEnumerable<(string Text, string Thinking)> source,
+        string chosen,
+        MlxOptions options,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await using var replies = source.GetAsyncEnumerator(cancellationToken);
         var spoke = false;
         string? failure = null;
-        var noticed = false;
+        var next = replies.MoveNextAsync().AsTask();
+        if (await IsLateAsync(next, options.LoadNoticeDelay, cancellationToken).ConfigureAwait(false))
+        {
+            yield return new Notice($"Loading {MlxModels.Short(chosen)}…", LoadingKind);
+        }
+
         while (true)
         {
-            var next = replies.MoveNextAsync().AsTask();
-            if (!spoke && !noticed)
-            {
-                noticed = true;
-                using var wait = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                var late = Task.Delay(options.LoadNoticeDelay, wait.Token);
-                var first = await Task.WhenAny(next, late).ConfigureAwait(false);
-                await wait.CancelAsync().ConfigureAwait(false);
-                if (first == late && !next.IsCompleted && !cancellationToken.IsCancellationRequested)
-                {
-                    yield return new Notice($"Loading {MlxModels.Short(chosen)}…", LoadingKind);
-                }
-            }
-
             bool more;
             try
             {
@@ -114,21 +125,31 @@ public static class MlxChat
                 spoke = true;
                 yield return new TextDelta(text);
             }
+
+            next = replies.MoveNextAsync().AsTask();
         }
 
-        if (failure is null && !spoke)
-        {
-            failure = "The local model returned nothing.";
-        }
-
+        failure ??= spoke ? null : "The local model returned nothing.";
         if (failure is not null)
         {
-            yield return new StreamError(failure, Code);
-            yield return new Completed(1);
+            foreach (var failed in Failed(failure, Code))
+            {
+                yield return failed;
+            }
             yield break;
         }
 
         yield return new Completed(0);
+    }
+
+    /// <summary>True when <paramref name="next"/> is still pending after <paramref name="delay"/> and the turn is not cancelled.</summary>
+    private static async Task<bool> IsLateAsync(Task next, TimeSpan delay, CancellationToken cancellationToken)
+    {
+        using var wait = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var late = Task.Delay(delay, wait.Token);
+        var first = await Task.WhenAny(next, late).ConfigureAwait(false);
+        await wait.CancelAsync().ConfigureAwait(false);
+        return first == late && !next.IsCompleted && !cancellationToken.IsCancellationRequested;
     }
 
     private static string CodeOf(LocalServiceState state) => state.Status switch
