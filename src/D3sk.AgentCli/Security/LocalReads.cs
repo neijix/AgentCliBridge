@@ -48,6 +48,11 @@ internal static class LocalReads
         "sudo", "doas", "env", "xargs", "timeout", "nohup", "nice", "command", "exec", "time", "watch", "stdbuf",
     };
 
+    private static readonly HashSet<string> WrapperValueOptions = new(StringComparer.Ordinal)
+    {
+        "-u", "--unset", "-C", "--chdir", "-s", "--signal", "-k", "--kill-after", "-I", "-n", "-P", "-L", "-d", "-g", "-p", "-S",
+    };
+
     private static readonly HashSet<string> Shells = new(StringComparer.Ordinal) { "sh", "bash", "zsh", "dash", "ksh", "fish" };
 
     private static readonly HashSet<string> GitDownloads = new(StringComparer.Ordinal) { "clone", "fetch", "pull", "submodule", "remote" };
@@ -85,12 +90,16 @@ internal static class LocalReads
         {
             return true;
         }
+        if ((command.Contains('$') || command.Contains('`')) && segments.SelectMany(w => w).Any(w => Downloaders.Contains(Path.GetFileName(w.TrimStart('$', '(', '`')))))
+        {
+            return true; // `$(which curl) -so p URL`: the program is named only inside the substitution
+        }
         foreach (var segment in segments)
         {
             var i = 0;
             while (i < segment.Count && (IsAssignment(segment[i]) || Wrappers.Contains(segment[i]) || segment[i].StartsWith('-') || segment[i].All(char.IsDigit)))
             {
-                i++;
+                i += WrapperValueOptions.Contains(segment[i]) ? 2 : 1; // `env -u HOME curl`: HOME is a value, not the command
             }
             if (i == segment.Count)
             {
@@ -171,10 +180,10 @@ internal static class LocalReads
         return name switch
         {
             "git" => GitSubcommand(args) is { } sub && GitReaders.Contains(sub)
-                && !args.Any(a => a.StartsWith("-O", StringComparison.Ordinal) || a.StartsWith("--open", StringComparison.Ordinal)), // grep -O runs a pager
+                && (sub != "grep" || !args.Any(a => a.StartsWith("-O", StringComparison.Ordinal) || a.StartsWith("--o", StringComparison.Ordinal))), // grep -O (--op…) runs a pager
             "find" => !args.Any(FindRunners.Contains),
             "rg" => !args.Any(a => a.StartsWith("--pre", StringComparison.Ordinal)), // --pre runs a command per file
-            "sort" => !args.Any(a => a.StartsWith("--com", StringComparison.Ordinal)), // --compress-program runs one
+            "sort" => !args.Any(a => a.StartsWith("--c", StringComparison.Ordinal)), // --compress-program (--co…) runs one
             "sed" => IsPrintOnlySed(args),
             _ => true,
         };
@@ -199,10 +208,9 @@ internal static class LocalReads
                 hasExpression = true;
                 scripts.Add(arg["--expression=".Length..]);
             }
-            else if (arg.StartsWith("-f", StringComparison.Ordinal) || arg.StartsWith("--file", StringComparison.Ordinal)
-                || (arg.StartsWith('-') && !arg.StartsWith("--", StringComparison.Ordinal) && arg.Contains('e')))
+            else if (arg.StartsWith('-') && !IsPlainSedOption(arg))
             {
-                return false; // a script file, or `-ne SCRIPT` style bundles: not worth parsing
+                return false; // a script file, a `-ne SCRIPT` bundle, or a long option sed may expand from an abbreviation
             }
             else if (!arg.StartsWith('-'))
             {
@@ -219,6 +227,11 @@ internal static class LocalReads
         }
         return scripts.All(SedPrintScript.IsMatch);
     }
+
+    // sed expands any unique abbreviation of a long option (`--exp` is --expression), so only these exact forms pass.
+    private static bool IsPlainSedOption(string arg) =>
+        arg is "--quiet" or "--silent" or "--regexp-extended" or "--separate" or "--null-data" or "--unbuffered" or "--posix" or "--debug"
+        || (!arg.StartsWith("--", StringComparison.Ordinal) && arg.Length > 1 && arg[1..].All("nEsrzu".Contains));
 
     /// <summary>The git subcommand after <c>-C dir</c> and flag options; null when there is none or a <c>-c</c> setting (a pager, a hook) could run a command.</summary>
     private static string? GitSubcommand(List<string> args)

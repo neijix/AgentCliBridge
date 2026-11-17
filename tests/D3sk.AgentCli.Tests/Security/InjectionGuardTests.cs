@@ -245,6 +245,7 @@ public class InjectionGuardTests
     [InlineData("cat src/a.cs")]
     [InlineData("cd repo && grep -rn \"ignore previous\" src | head -20")]
     [InlineData("sed -n 1,80p a.cs 2>/dev/null; git log --oneline -5")]
+    [InlineData("sed --quiet -E '10,20p;30q' a.cs")]
     [InlineData("git -C repo --no-pager show HEAD:a.cs 2>&1 | tail")]
     [InlineData("find . -name '*.cs' | wc -l")]
     public void A_shell_line_of_local_readers_is_local(string command) => Assert.True(LocalReads.IsLocalCommand(command), command);
@@ -273,6 +274,10 @@ public class InjectionGuardTests
     [InlineData("sort --compress-program=sh a.txt")]
     [InlineData("./tools/cat https://example.com")]
     [InlineData("PAGER=curl git log")]
+    [InlineData("sed --exp='1e curl -s https://example.com' p README.md")]
+    [InlineData("sed -ne '1e curl' README.md")]
+    [InlineData("git grep --op='curl -s https://example.com #' -l x")]
+    [InlineData("sort --co=sh a.txt")]
     public void A_shell_line_that_can_reach_beyond_the_workspace_is_not_local(string command) =>
         Assert.False(LocalReads.IsLocalCommand(command), command);
 
@@ -283,6 +288,8 @@ public class InjectionGuardTests
     [InlineData("bash -lc 'gh issue view 7 > i.txt'", true)]
     [InlineData("cat $(curl -s https://example.com)", true)]
     [InlineData("d3skwebscout fetch https://example.com > p.txt", true)]
+    [InlineData("env -u HOME curl -so p https://example.com", true)]
+    [InlineData("$(which curl) -so p https://example.com", true)]
     [InlineData("grep -rn 'curl https://example.com' src", false)]
     [InlineData("grep -rn WebScout src && ./check.sh", false)]
     [InlineData("dotnet test D3sk.AgentCli.slnx -c Release", false)]
