@@ -3,7 +3,16 @@
 The C# line on `main`, tagged `dotnet-v<semver>`. The Python line lives on the `python` branch
 with its own `v*` tags; this file does not cover it.
 
-## [Unreleased]
+## [dotnet-v0.7.0] — 2026-11-17
+
+### Added
+- `ArtificialAnalysisApi`: the Artificial Analysis data API v2 model list (`/api/v2/language/models/free`,
+  any key tier). `PageRequest(apiKey, page)` builds an authenticated GET; `ReadAll(fetchPage)` reads every
+  page (at most `MaxPages`) into one `MetricsTable`. The host owns the transport and the key, and credits
+  Artificial Analysis where it shows the figures. It rates models the leaderboard page leaves out
+  (Beam 1.0, GLM-5.3-Flash, Nemotron 3.5 Super VL, DeepSeek V4.1 Flash 1017, ...).
+- `ModelRanking.ParseLeaderboard` also reads one API v2 page (`{"data": [...]}`, the index under
+  `evaluations`, the speed under `performance`).
 
 ### Changed
 - The page files follow the Python line's `agent_cli_bridge/ui/` at rev `a379df29`: the components'
