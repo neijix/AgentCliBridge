@@ -170,7 +170,8 @@ public sealed partial class ModelRanking
     public static double? BarPercent(double value, double max) =>
         double.IsFinite(value) && double.IsFinite(max) && max > 0 ? Math.Clamp(value / max * 100, 0, 100) : null;
 
-    /// <summary>Extracts the family table from Artificial Analysis's leaderboard: the <c>initialModels</c> array, the Next.js HTML, or its RSC payload.
+    /// <summary>Extracts the family table from Artificial Analysis's leaderboard: one page of its API v2 model list
+    /// (<c>{"data": [...]}</c>), the <c>initialModels</c> array, the Next.js HTML, or its RSC payload.
     /// Non-reasoning duplicates and unranked rows are skipped. Anything else gives an empty table, never an exception.</summary>
     public static MetricsTable ParseLeaderboard(string raw)
     {
@@ -183,7 +184,8 @@ public sealed partial class ModelRanking
             }
 
             var slug = (Str(item, "slug")).Trim().ToLowerInvariant();
-            var idx = Num(item, "intelligenceIndex") ?? Num(item, "intelligence_index");
+            var idx = Num(item, "intelligenceIndex") ?? Num(item, "intelligence_index")
+                ?? Nested(item, "evaluations", "artificial_analysis_intelligence_index");
             if (slug.Length == 0 || idx is null)
             {
                 continue;
@@ -209,11 +211,8 @@ public sealed partial class ModelRanking
                 effort = LabelEffortRe().Match(label) is { Success: true } lm ? lm.Groups[1].Value.ToLowerInvariant() : "high";
             }
 
-            var spd = Num(item, "medianOutputTokensPerSecond");
-            if (spd is null && item.TryGetProperty("timescaleData", out var ts) && ts.ValueKind == JsonValueKind.Object)
-            {
-                spd = Num(ts, "median_output_speed");
-            }
+            var spd = Num(item, "medianOutputTokensPerSecond") ?? Nested(item, "timescaleData", "median_output_speed")
+                ?? Nested(item, "performance", "median_output_tokens_per_second");
 
             if (!families.TryGetValue(family, out var bucket))
             {
@@ -340,6 +339,9 @@ public sealed partial class ModelRanking
     private static double? Num(JsonElement e, string name) =>
         e.TryGetProperty(name, out var v) && MetricsTable.IsPositiveNumber(v, out var n) ? n : null;
 
+    private static double? Nested(JsonElement e, string parent, string name) =>
+        e.TryGetProperty(parent, out var inner) && inner.ValueKind == JsonValueKind.Object ? Num(inner, name) : null;
+
     private static List<JsonElement> FindEntries(string text)
     {
         var result = new List<JsonElement>();
@@ -347,6 +349,11 @@ public sealed partial class ModelRanking
         if (trimmed.StartsWith('['))
         {
             AddArray(trimmed, 0, result);
+            return result;
+        }
+
+        if (trimmed.StartsWith('{') && AddApiPage(trimmed, result))
+        {
             return result;
         }
 
@@ -378,6 +385,27 @@ public sealed partial class ModelRanking
         }
 
         return result;
+    }
+
+    // The API v2 model list: an object whose `data` array holds the rows.
+    private static bool AddApiPage(string text, List<JsonElement> into)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(text);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object
+                || !doc.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+
+            into.AddRange(data.EnumerateArray().Select(e => e.Clone()));
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     // Parses one JSON array starting at `start` (the rest of the text may follow it), as Python's raw_decode does.
