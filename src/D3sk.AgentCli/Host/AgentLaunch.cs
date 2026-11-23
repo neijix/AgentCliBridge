@@ -64,7 +64,7 @@ internal sealed record AgentLaunch(
             LiveInput = live?.Stdin,
         };
         var status = flavor == "copilot" ? new CopilotStatus() : null;
-        return new AgentLaunch(command, null, AgentParsers.For(flavor, r.Activity, deadline, status, live), status, deadline, armed.Watch, live);
+        return new AgentLaunch(command, null, AgentParsers.For(flavor, r.Activity, deadline, status, live, r.Run?.WaitForBackgroundTasks == true), status, deadline, armed.Watch, live);
     }
 
     /// <summary>Why the turn cannot start on <paramref name="binary"/>: not found, or Cursor's name on Grok's binary; null when it can.</summary>

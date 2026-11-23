@@ -23,6 +23,17 @@ public sealed record ChildRunOptions
 
     /// <summary>How often a read with no deadline checks whether the CLI exited.</summary>
     public TimeSpan ExitPoll { get; init; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Claude only, off by default. A <c>result</c> that comes while a background task is still listed open, or while a
+    /// finished task's notice is not yet taken up by the CLI, then starts no turn deadline and leaves the live input open: the
+    /// turn goes on with the CLI's own follow-up reply, as the same turn and with no limit (a host that wants a bound cancels
+    /// the turn). The wait ends at a <c>result</c> with no task open and no notice waiting, when the CLI exits, or at Stop.
+    /// Another CLI ignores it. It takes effect through <c>AgentTurn</c> (<c>AgentLaunch</c> hands it to the Claude output
+    /// parser); <see cref="ChildTurn.RunAsync"/> alone only reads the deadline the parser starts, so on its own this option
+    /// changes nothing.
+    /// </summary>
+    public bool WaitForBackgroundTasks { get; init; }
 }
 
 /// <summary>

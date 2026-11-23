@@ -22,6 +22,15 @@ public static class ClaudeStream
             return kind.Contains("agent", StringComparison.Ordinal) || kind.Contains("workflow", StringComparison.Ordinal);
         });
 
+    /// <summary>Whether a <c>background_tasks_changed</c> lists any task, whatever its <c>task_type</c>; <c>[]</c> lists none.</summary>
+    public static bool ListsOpenTasks(JsonObject lineEvent) => lineEvent["tasks"] is JsonArray { Count: > 0 };
+
+    /// <summary>Whether a <c>user</c> line is the CLI handing a finished task's notice to the model (<c>origin.kind</c> <c>task-notification</c>).</summary>
+    public static bool IsTaskNotice(JsonObject lineEvent) => Json.AsString(Json.AsObject(lineEvent["origin"])["kind"]) == "task-notification";
+
+    /// <summary>The run a notice line (<c>user</c> echo or follow-up <c>result</c>) names in <c>origin.runId</c>; null when it names none.</summary>
+    public static string? NoticeRun(JsonObject lineEvent) => Json.AsString(Json.AsObject(lineEvent["origin"])["runId"]);
+
     /// <summary>The session update of a <c>system</c>/<c>init</c> line, when its id is new.</summary>
     public static List<StreamEvent> InitSession(JsonObject lineEvent, SessionIds sessions) =>
         Session(lineEvent, sessions) is { } update ? [update] : [];
@@ -63,7 +72,7 @@ public static class ClaudeStream
         if (kind == "text_delta" && Json.AsString(delta["text"]) is { Length: > 0 } text)
         {
             state.Seen = true;
-            return [new TextDelta(text)];
+            return Shown(state, text);
         }
 
         if (activity && kind == "thinking_delta" && Json.AsString(delta["thinking"]) is { Length: > 0 } thinking)
@@ -79,11 +88,14 @@ public static class ClaudeStream
     /// <paramref name="cancelMessage"/> is set only for Grok, when the turn was cancelled because a tool
     /// wanted an approval a headless run cannot give. On a live turn (<paramref name="live"/>) a resumed session's
     /// empty leftover result is skipped, and the deadline starts only once the turn took its last message and
-    /// <paramref name="closeInput"/> closed stdin.
+    /// <paramref name="closeInput"/> closed stdin. With <paramref name="backgroundWait"/> a result that comes while a task is
+    /// listed open, or while a finished task's notice is not yet taken up (the CLI answers it right after), failed or not, ends
+    /// nothing (the result of a follow-up first takes its own notice): stdin, the host's input and the deadline stay as they are, and the next reply is a fresh one
+    /// (its own fallback text, a paragraph break before its first text).
     /// </summary>
     public static List<StreamEvent> Result(
         JsonObject lineEvent, ClaudeTurnState state, TurnDeadline? afterResult, string? cancelMessage,
-        LiveLines? live = null, Action? closeInput = null)
+        LiveLines? live = null, Action? closeInput = null, bool backgroundWait = false)
     {
         var events = new List<StreamEvent>();
         if (Session(lineEvent, state.Sessions) is { } update)
@@ -105,7 +117,12 @@ public static class ClaudeStream
         else if (!state.Seen && Json.AsString(lineEvent["result"]) is { Length: > 0 } resultText)
         {
             state.Seen = true;
-            events.Add(new TextDelta(resultText));
+            events.AddRange(Shown(state, resultText));
+        }
+
+        if (Waits(lineEvent, state, backgroundWait))
+        {
+            return events; // judged from what came before: a task is open or a notice waits, so the wait begins or goes on
         }
 
         // A message still on its way keeps a live turn open; Claude then answers it with a result of its own.
@@ -127,6 +144,42 @@ public static class ClaudeStream
             events.Add(new StreamError(cancelMessage, "cancelled"));
         }
 
+        return events;
+    }
+
+    /// <summary>
+    /// Whether this <c>result</c> begins or continues the background wait. A follow-up's result first takes its own notice; when the
+    /// wait goes on, the next reply is a fresh one (its own fallback text, a paragraph break before its first text).
+    /// </summary>
+    private static bool Waits(JsonObject lineEvent, ClaudeTurnState state, bool backgroundWait)
+    {
+        if (!backgroundWait)
+        {
+            return false;
+        }
+
+        if (IsTaskNotice(lineEvent))
+        {
+            state.TakeNotice(NoticeRun(lineEvent));
+        }
+
+        if (!state.HasOpenTasks && !state.NoticePending)
+        {
+            return false;
+        }
+
+        state.Seen = false;
+        state.BreakBeforeText = state.ShownText;
+        return true;
+    }
+
+    /// <summary>A text to show: after a wait's earlier reply that showed text, a paragraph break comes first.</summary>
+    private static List<StreamEvent> Shown(ClaudeTurnState state, string text)
+    {
+        List<StreamEvent> events = state.BreakBeforeText ? [new TextDelta("\n\n")] : [];
+        state.BreakBeforeText = false;
+        state.ShownText = true;
+        events.Add(new TextDelta(text));
         return events;
     }
 

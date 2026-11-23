@@ -17,8 +17,15 @@ namespace D3sk.AgentCli.Output.Claude;
 /// <param name="CancelledMessage">Grok's note for a result whose <c>stop_reason</c> is <c>cancelled</c>; null for the other CLIs.</param>
 /// <param name="Live">The control-line reader of a live turn; null for a turn that takes no input.</param>
 /// <param name="CloseInput">Closes the CLI's stdin once a live turn's result arrived with nothing left on the way.</param>
+/// <param name="BackgroundWait">
+/// Claude only: a result that comes while a task is listed open or a finished task's notice waits for its follow-up (failed or
+/// not) begins or continues a wait (no deadline, input open) instead of ending the turn. A notice is taken by its echo or its
+/// follow-up's result, never by an <c>init</c> or a result with no <c>origin</c>; a task listed open, a notice of an unlisted task
+/// or of a task the model stopped does not count the same way (see <see cref="ClaudeTurnState.Notice"/>).
+/// </param>
 public sealed record ClaudeOutputParser(
-    bool Activity = true, TurnDeadline? AfterResult = null, string? CancelledMessage = null, LiveLines? Live = null, Action? CloseInput = null) : IOutputParser
+    bool Activity = true, TurnDeadline? AfterResult = null, string? CancelledMessage = null, LiveLines? Live = null, Action? CloseInput = null,
+    bool BackgroundWait = false) : IOutputParser
 {
     /// <inheritdoc />
     public async IAsyncEnumerable<StreamEvent> ParseAsync(
@@ -45,7 +52,7 @@ public sealed record ClaudeOutputParser(
         if (type == "result")
         {
             var cancelled = Json.AsString(lineEvent["stop_reason"]) == "cancelled" ? CancelledMessage : null;
-            return ClaudeStream.Result(lineEvent, state, AfterResult, cancelled, Live, CloseInput);
+            return ClaudeStream.Result(lineEvent, state, AfterResult, cancelled, Live, CloseInput, BackgroundWait);
         }
 
         var subtype = Json.AsString(lineEvent["subtype"]);
@@ -57,6 +64,20 @@ public sealed record ClaudeOutputParser(
         if (type == "system" && subtype == "background_tasks_changed")
         {
             state.HasBackgroundAgents = ClaudeStream.RunsBackgroundAgents(lineEvent);
+            state.HasOpenTasks = ClaudeStream.ListsOpenTasks(lineEvent);
+            state.Listed(lineEvent["tasks"] as JsonArray);
+            return [];
+        }
+
+        if (BackgroundWait && type == "system" && subtype == "task_notification")
+        {
+            state.Notice(lineEvent);
+            return [];
+        }
+
+        if (BackgroundWait && type == "user" && ClaudeStream.IsTaskNotice(lineEvent))
+        {
+            state.TakeNotice(ClaudeStream.NoticeRun(lineEvent)); // the CLI's own echo of the notice: the reply under way took it, and it is not the user's message
             return [];
         }
 
