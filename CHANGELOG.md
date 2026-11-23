@@ -3,6 +3,24 @@
 The C# line on `main`, tagged `dotnet-v<semver>`. The Python line lives on the `python` branch
 with its own `v*` tags; this file does not cover it.
 
+## [dotnet-v0.8.0] — 2026-11-23
+
+### Added
+- `ChildRunOptions.WaitForBackgroundTasks` (on `AgentTurnRequest.Run`), off by default and for Claude turns only (another CLI
+  ignores it): a Claude `result` that comes while the latest `background_tasks_changed` still lists a task (of any kind, a
+  shell command too), or while a finished task's `task_notification` has not yet been taken up by the CLI (the follow-up it
+  runs on that notice comes right after the `result`), failed or not, no longer ends the turn. No turn deadline starts and the CLI's stdin and the host's `TurnInput` stay open,
+  so `Say` and `Answer` still reach the CLI; the CLI's own follow-up reply (text, tool events, its `result`) is part of the
+  same turn, before `Completed`, its text after the first reply's with a paragraph break between them. A notice is counted per task: it waits for the reply that
+  takes it (the CLI's echo of the notice inside a reply, or its follow-up's `result`, whose `origin.runId` names the task), never for an
+  `init` or a reply to the user's message; a notice of a task that was never listed open, or that the model stopped itself
+  (`status: stopped`), waits for nothing. The wait has three exits: a
+  `result` with no task listed and no notice waiting (the turn then ends as before: grace, exit grace, tree kill); the CLI
+  exiting by itself (the input closes with the turn; a task still holding the CLI's stdout is cut at the grace); the host
+  cancelling the turn (the tree is killed and `OperationCanceledException` is thrown as before). There is no time limit once
+  the list is empty and no bound on a failed `result` either: a host that wants one cancels the turn. The option takes
+  effect through `AgentTurn`, not through `ChildTurn.RunAsync` alone. `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` stays `0`. Nothing changes for a host that does not ask.
+
 ## [dotnet-v0.7.0] — 2026-11-17
 
 ### Added
