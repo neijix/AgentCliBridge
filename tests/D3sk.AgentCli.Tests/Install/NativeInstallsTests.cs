@@ -8,6 +8,32 @@ public sealed class NativeInstallsTests : IDisposable
 
     public void Dispose() => Directory.Delete(_home, recursive: true);
 
+    private const string NoSymlinks = "symlinks need Developer Mode or elevation on Windows";
+
+    private static readonly Lazy<bool> CanSymlink = new(ProbeSymlinks);
+
+    // Only a missing OS privilege counts as "cannot"; any other failure surfaces in the tests.
+    private static bool ProbeSymlinks()
+    {
+        var dir = Directory.CreateTempSubdirectory("symlink-probe").FullName;
+        try
+        {
+            var target = Path.Combine(dir, "target");
+            File.WriteAllText(target, "x");
+            File.CreateSymbolicLink(Path.Combine(dir, "file-link"), target);
+            Directory.CreateSymbolicLink(Path.Combine(dir, "dir-link"), dir);
+            return true;
+        }
+        catch (Exception e) when (e is UnauthorizedAccessException || (e is IOException && (e.HResult & 0xFFFF) == 1314))
+        {
+            return false;
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch (IOException) { }
+        }
+    }
+
     private string Cursor(out string bin, out string share)
     {
         share = Path.Combine(_home, ".local", "share", "cursor-agent");
@@ -26,6 +52,7 @@ public sealed class NativeInstallsTests : IDisposable
     [Trait("Preserve", "P38")]
     public void A_native_install_removes_only_its_own_folder_and_links()
     {
+        Assert.SkipUnless(CanSymlink.Value, NoSymlinks);
         var real = Cursor(out var bin, out var share);
         var other = Path.Combine(_home, "elsewhere");
         File.WriteAllText(other, "x");
@@ -78,6 +105,7 @@ public sealed class NativeInstallsTests : IDisposable
     [Trait("Security", "native-remove")]
     public void A_symlinked_install_folder_is_never_followed_or_deleted()
     {
+        Assert.SkipUnless(CanSymlink.Value, NoSymlinks);
         var victim = Path.Combine(_home, "victim");
         Directory.CreateDirectory(victim);
         File.WriteAllText(Path.Combine(victim, "keep"), "x");
